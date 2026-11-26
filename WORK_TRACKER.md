@@ -62,21 +62,21 @@ Aturan tambahan:
 
 | Field | Nilai |
 | --- | --- |
-| Fase terakhir selesai | **E-1 Documentation — `COMPLETED`** (2026-11-26) |
-| Fase aktif | **E-2 Foundation — `NOT STARTED`** |
-| Fase setelahnya | E-3 Schema & RLS (`NOT STARTED`) |
+| Fase terakhir selesai | **E-2a Git Commit & Push — `COMPLETED`** (2026-11-26) |
+| Fase aktif | **E-3 Schema & RLS — `NOT STARTED`** (belum ada izin analysis/proposal) |
+| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
-| Fase selesai | 2 / 10 (20%) |
+| Fase selesai | **3 / 10 (30%)** + 1 checkpoint tanpa bobot (E-2a) |
 | Acceptance criteria terverifikasi | **0 / 42** |
-| Kode aplikasi | **0 file** (belum diimplementasikan) |
+| Kode aplikasi | **25 file foundation**, 0 fitur bisnis |
 | Migration | **0** (belum dibuat) |
-| Test dijalankan | **0** |
+| Test dijalankan | **11 unit test lulus** (1 file) |
 | Deployment | **belum dikonfigurasi** |
-| Blocker terbuka | 3 (`KI-01`, `KI-04`, `KI-09`) |
-| Persetujuan yang ditunggu | 1 (E-2: scaffold + dependency) |
+| Blocker terbuka | 3 (`KI-01`, `KI-02`, `KI-04`) |
+| Persetujuan yang ditunggu | 1 (E-3 **Analysis/Proposal**) |
 
-Ringkasan satu kalimat: **desain dan dokumentasi selesai dan disetujui; implementasi belum
-dimulai.**
+Ringkasan satu kalimat: **foundation aplikasi terpasang dan terverifikasi (G1–G12) serta
+ter-commit; database dan fitur bisnis belum dimulai.**
 
 ---
 
@@ -88,7 +88,7 @@ dimulai.**
 | --- | --- | --- | --- |
 | E-0 | Planning | `COMPLETED` | 10% |
 | E-1 | Documentation | `COMPLETED` | 10% |
-| E-2 | Foundation | `NOT STARTED` | 10% |
+| E-2 | Foundation | `COMPLETED` | 10% |
 | E-3 | Schema & RLS | `NOT STARTED` | 12% |
 | E-4 | Storefront & Seed | `NOT STARTED` | 12% |
 | E-5 | Checkout, Payment & Idempotency | `NOT STARTED` | 18% |
@@ -97,7 +97,8 @@ dimulai.**
 | E-8 | Testing & Polish | `NOT STARTED` | 5% |
 | E-9 | Final Verification & Submission | `NOT STARTED` | 3% |
 
-**Progres berbobot: 20%** (E-0 + E-1 selesai).
+**Progres berbobot: 30%** = E-0 (10%) + E-1 (10%) + E-2 (10%). E-2a **bukan** fase berbobot
+(0%) — ia checkpoint Git di dalam E-2. E-3…E-9 (total 70%) tetap `NOT STARTED`.
 
 ### 3.2 Artifact readiness
 
@@ -113,8 +114,10 @@ Angka "direncanakan" berasal dari dokumen yang sudah disetujui, bukan estimasi.
 | Integration eksternal | **0** | 1 | `docs/technical-decisions.md` ADR-8 |
 | Workflow n8n | **0** | 1 | `docs/technical-decisions.md` ADR-9 |
 | Acceptance criteria verified | **0** | 42 | `docs/mvp-scope.md` §6 |
-| Test (unit + integration + E2E) | **0** | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
+| Test (unit + integration + E2E) | **11 unit** (1 file) | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
 | Deployment demo | **0** | 1 | di luar cakupan dokumen |
+| File foundation aplikasi | **25** | 25 | di-commit pada `7ed8371` |
+| Dependency terpasang | **17** | 17 | `package.json` / `package-lock.json` |
 
 ---
 
@@ -185,30 +188,62 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 | `docs/mvp-scope.md` | `41fdee65c2c3` |
 | `docs/technical-decisions.md` | `918bdfca7b08` |
 
-### E-2 — Foundation — `NOT STARTED`
+### E-2 — Foundation — `COMPLETED`
 
 - **Objective:** Menyiapkan kerangka aplikasi yang dapat dijalankan: scaffold Next.js 16 +
   TypeScript, Tailwind v4, konfigurasi environment, tiga Supabase client, proteksi route
   admin, logger dengan redaksi, dan konfigurasi test.
 - **Tasks:**
-  - [ ] Scaffold Next.js 16 (App Router) + TypeScript
-  - [ ] Tailwind CSS v4 CSS-first + design tokens
-  - [ ] `src/lib/env.ts` + `.env.example` (8 variabel, 3 server-only)
-  - [ ] `src/lib/supabase/{browser,server,admin}.ts` (admin: `import 'server-only'`)
-  - [ ] `src/proxy.ts` — proteksi `/admin/*` (Next 16, bukan `middleware.ts`)
-  - [ ] `src/lib/logger.ts` — redaksi `Idempotency-Key`, `token`, path capability
-  - [ ] `src/components/ui` primitif awal (Button, Input, Select, StatusBadge)
-  - [ ] Konfigurasi Vitest + Playwright
-  - [ ] `next.config.ts` header `/orders/:path*` dan `/mock-gateway/:path*`
-- **Status:** `NOT STARTED`
-- **Verification result:** Belum ada. Bukti yang diperlukan: `npm run dev` berhasil,
-  `/admin` tanpa sesi teralihkan, `npm run build` tanpa secret di bundle, `npm run test`
-  menjalankan 1 smoke test.
-- **Blockers / risks:** `KI-03` dependency belum di-install (butuh izin) · `KI-09` git belum
-  diinisialisasi · risiko Next 16 API baru (`proxy.ts`, async `params`/`cookies`).
-- **Completion date:** —
+  - [x] Scaffold Next.js 16 (App Router) + TypeScript
+  - [x] Tailwind CSS v4 CSS-first + design tokens (`@theme`, token `--font-*`)
+  - [x] `src/lib/env.ts` (server-only) + `src/lib/env.public.ts` + `.env.example` (8 variabel)
+  - [x] `src/lib/supabase/{browser,server}.ts` — `admin.ts` **tidak dibuat** (lihat KI-19)
+  - [x] `src/proxy.ts` — gate sesi fail-closed untuk `/admin/*` (Next 16, bukan `middleware.ts`)
+  - [x] `src/lib/logger.ts` — redaksi `Idempotency-Key`, `token`, path capability
+  - [x] `src/components/ui` — `cn`, `Button`, `Input` (`Select`/`StatusBadge` ditunda ke E-5/E-6)
+  - [x] Konfigurasi Vitest (Playwright ditunda ke E-8)
+  - [x] `next.config.ts` header `/orders/:path*` dan `/mock-gateway/:path*`
+- **Deviasi scope (disetujui sebelum eksekusi):** 2 Supabase client (bukan 3) · 3 primitif UI
+  (bukan 5) · Vitest saja · env dipecah 2 modul (public/server) · tanpa `next/font`
+- **Status:** `COMPLETED`
+- **Verification result:** **G1** typecheck ✓ · **G2** lint 0 error/0 warning ✓ · **G3** 11/11
+  unit test ✓ · **G4** build tanpa env ✓ · **G5** header `Referrer-Policy: no-referrer` /
+  `Cache-Control: no-store` / `X-Robots-Tag` ✓ · **G6** 0 kebocoran rahasia di `.next/static` ✓
+  · **G7a** tanpa sesi 307 (5–22 ms) · **G7b** auth menggantung → abort **3,054 s / 3,042 s** ·
+  **G7c** tanpa env 307 (13 ms) · **G7d** 4 kasus `isAdminUser` ✓ · **G8** 9 hash baseline
+  identik ✓ · **G9** HEAD tetap `5d5895f` saat itu ✓ · **G10** 0 impor `next/font` ✓ ·
+  **G11** `@playwright/test` kosong ✓ · **G12** 25 untracked / 0 modified ✓
+  Catatan: `next build` menyesuaikan `tsconfig.json` secara wajib (`jsx: react-jsx`, include
+  `.next/dev/types`) dan menghasilkan `next-env.d.ts` (di-ignore).
+  **Batas verifikasi — G1–G12 TIDAK membuktikan integrasi Supabase Auth, RLS, maupun seluruh
+  skenario 401/403.** Yang terbukti hanya perilaku fail-closed proxy dan logika keputusan
+  `isAdminUser` secara unit. Integrasi Auth/RLS diuji di E-3 dan 401/403 dengan sesi nyata di E-6.
+- **Blockers / risks:** Tidak ada blocker implementasi E-2 yang belum terselesaikan.
+  KI-01, KI-02, dan KI-04 tetap terbuka sebagai known issues untuk fase berikutnya.
+  `KI-03` dan `KI-09` selesai pada E-2/E-2a; batas verifikasi: `/admin/login` belum ada (`KI-20`).
+- **Completion date:** 2026-11-26
 - **References:** `README.md` §Installation, §Environment variables · `AGENTS.md` §Where things
   live · `docs/architecture.md` §3, §9 · `docs/technical-decisions.md` ADR-1, ADR-2, ADR-10
+
+#### 4.2 E-2a — Git Commit & Push — `COMPLETED`
+
+- **Objective:** Menyimpan foundation E-2 sebagai checkpoint Git yang dapat dilacak.
+- **Tasks:**
+  - [x] Stage 25 path eksplisit (tanpa `git add .`)
+  - [x] Gate A — isi staging (25 baris `A`, 0 non-A)
+  - [x] Gate B — secret scan + artefak + biner
+  - [x] Commit `feat: establish application foundation and core infrastructure`
+  - [x] Gate C — remote masih di baseline sebelum push
+  - [x] Push fast-forward tanpa force
+  - [x] Verifikasi commit, tracking, dan isi tree remote
+- **Status:** `COMPLETED`
+- **Verification result:** Commit `7ed8371e81e4090498398f3576ffe4833b08a2c5` (25 file, 9.352
+  insertions) · gate B: 0 secret/biner/artefak · push `5d5895f..7ed8371` tanpa force ·
+  `HEAD` = `origin/main` · working tree clean · blob 9 dokumen identik antara `5d5895f` dan
+  `7ed8371` · total file di `origin/main` = 34
+- **Blockers / risks:** Tidak ada.
+- **Completion date:** 2026-11-26
+- **References:** commit `7ed8371`, `5d5895f`
 
 ### E-3 — Schema & RLS — `NOT STARTED`
 
@@ -364,6 +399,12 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-12 | 2026-11-26 | Header capability di `next.config.ts`; API order menetapkan sendiri `no-store` | Approved | ADR-10 |
 | DL-13 | 2026-11-26 | Notifikasi at-least-once + `notificationId`; exactly-once tidak dijanjikan | Approved | ADR-9, MVP §6.4 |
 | DL-14 | 2026-11-26 | Tanpa auto-expiry order `pending`; tanpa queue/scheduler/worker | Approved | ADR-12 |
+| DL-15 | 2026-11-26 | `src/proxy.ts` hanya mengimpor `env.public.ts`; `env.ts` (server-only) dipakai modul server | Implemented | `src/proxy.ts:4` |
+| DL-16 | 2026-11-26 | Timeout dibatasi lewat `global.fetch` + `AbortSignal.any` di `createFetchWithTimeout` | Implemented | `src/lib/http.ts:90`, `src/proxy.ts:74`, `src/lib/supabase/server.ts:39` |
+| DL-17 | 2026-11-26 | Tanpa `next/font`; tipografi memakai token `--font-display`/`--font-sans` | Implemented | `src/app/globals.css:22,24` |
+| DL-18 | 2026-11-26 | `typescript` 5.9.3 dan `eslint` 9.39.5 dipin eksak (bukan range) | Implemented | `package.json`; lihat KI-21 |
+| DL-19 | 2026-11-26 | `session.ts` tanpa `server-only`; batas rahasia ada di `env.ts` | Implemented | `src/lib/env.ts:1`, `src/modules/auth/session.ts:9` |
+| DL-20 | 2026-11-26 | `next-env.d.ts` di-ignore agar working tree tepat 25 file | Implemented | `.gitignore:9` |
 
 ---
 
@@ -373,14 +414,17 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | --- | --- | --- | --- | --- | --- |
 | KI-01 | Aset destinasi berstatus `REVIEW`, belum disetujui visual | Medium | Terbuka | E-4 | Review manusia atas 5 primary image |
 | KI-02 | Supabase CLI belum terpasang (Docker 29.9.2 tersedia) | Medium | Terbuka | E-3 | Izin untuk `npx supabase start` |
-| KI-03 | Dependency belum di-install | Medium | Terbuka | E-2 | Izin install pada E-2 |
+| KI-03 | Dependency di-install | Medium | **Resolved** (2026-11-26) | — | 397 paket terpasang, lockfile v3, commit `7ed8371` |
 | KI-04 | Kanal pengiriman n8n belum dipilih (asumsi A4) | Low | Terbuka | E-7 | Putuskan SMTP/chat sink |
 | KI-05 | Order `pending` tanpa auto-expiry | Low | Diterima | — | Terdokumentasi di README §Limitations |
 | KI-06 | Notifikasi at-least-once, duplikat mungkin | Low | Diterima | — | `notificationId` untuk dedup penerima |
 | KI-07 | Access log infrastruktur mencatat path capability | Low | Diterima | — | Mitigasi header + 0 third-party (ADR-10) |
 | KI-08 | Tanpa analytics / error monitoring | Low | Diterima | — | Aturan larangan di `AGENTS.md` |
-| KI-09 | Git belum diinisialisasi | Low | Terbuka | Semua | Izin eksplisit untuk `git init` |
+| KI-09 | Git belum diinisialisasi | Low | **Resolved** (2026-11-26) | — | Repo terinisialisasi; 2 commit, `origin/main` sinkron |
 | KI-10 | Sisa waktu ±3 hari untuk 8 fase implementasi | High | Risiko | E-8, E-9 | Cut-line + buffer submit |
+| KI-19 | `src/lib/supabase/admin.ts` belum dibuat (deferred/open) | Low | Terbuka | — | Tentukan kebutuhan & fasenya pada analisis E-3; belum ada komitmen fase |
+| KI-20 | `/admin/login` belum ada → halaman tujuan redirect masih 404 | Low | Terbuka | — | Ditutup E-6 |
+| KI-21 | `eslint@9.39.5` memunculkan peringatan EOL saat install | Low | **Diterima (warning)** | — | Pantau; naikkan hanya bila seluruh plugin mendukung |
 
 Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum ditemukan.
 
@@ -391,13 +435,18 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | ID | Aksi | Dependency | Butuh persetujuan |
 | --- | --- | --- | --- |
 | NA-01 | Catat `WORK_TRACKER.md` sebagai artefak resmi progres | — | Selesai |
-| NA-02 | Setujui scope E-2 (scaffold + dependency) | NA-01 | **Ya** |
+| NA-02 | Setujui scope E-2 (scaffold + dependency) | NA-01 | Selesai (`7ed8371`) |
 | NA-03 | Review visual 5 primary image | — | **Ya (pemilik proyek)** |
 | NA-04 | Pilih kanal notifikasi n8n | — | **Ya (pemilik proyek)** |
-| NA-05 | Setujui `git init` + `.gitignore` | — | **Ya** |
-| NA-06 | Jalankan E-2 langkah pertama setelah NA-02 | NA-02 | **Ya** |
+| NA-05 | Setujui `git init` + `.gitignore` | — | Selesai (`5d5895f`, `.gitignore` di `7ed8371`) |
+| NA-06 | Jalankan E-2 langkah pertama setelah NA-02 | NA-02 | Selesai |
+| NA-07 | Menunggu persetujuan untuk memulai **E-3 Analysis/Proposal** (bukan izin implementasi E-3) | NA-02 | **Ya** |
+| NA-08 | Sinkronkan `docs/design-solution.md` §5.2 (font) dan `AGENTS.md` (daftar skrip) dengan realitas E-2 | — | **Menunggu persetujuan terpisah** (belum ada izin mengubah dokumen baseline) |
 
-Urutan yang disarankan: **NA-02 → NA-06**, sambil menunggu **NA-03/NA-04** sebelum E-4/E-7.
+Urutan yang disarankan: **NA-07** (mulai E-3 Analysis/Proposal) → implementasi E-3 hanya setelah
+proposal E-3 disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
+persetujuan terpisah — tanpa izin tersebut, `AGENTS.md` dan `docs/design-solution.md` tidak
+disentuh.
 
 ---
 
@@ -411,6 +460,17 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-26 | E-1 Documentation selesai: 8 file dibuat dan diverifikasi (link, label, konsistensi) | `COMPLETED` |
 | 2026-11-26 | `WORK_TRACKER.md` dibuat sebagai pencatat progres utama | `COMPLETED` |
 | 2026-11-26 | E-2 Foundation dibuka sebagai fase aktif berikutnya | `NOT STARTED` |
+| 2026-11-26 | E-2 Foundation selesai: 25 file, 17 dependency, G1–G12 lulus | `COMPLETED` |
+| 2026-11-26 | E-2a checkpoint Git: commit `7ed8371` di `main`, `origin/main` sinkron | `COMPLETED` |
+| 2026-11-26 | E-2b: tracker disinkronkan dengan E-2/E-2a; dokumen baseline & kode tidak diubah | `COMPLETED` |
+
+Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
+setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:
+
+`| 2026-11-26 | E-2b: tracker disinkronkan dengan E-2/E-2a; dokumen baseline & kode tidak diubah | COMPLETED |`
+
+Bila ada gate gagal: baris dicatat dengan status sebenarnya (`IN PROGRESS` atau `BLOCKED` + ID
+`KI-xx`), atau tidak ditambahkan sama sekali. Tidak ada status `COMPLETED` tanpa bukti.
 
 ---
 
