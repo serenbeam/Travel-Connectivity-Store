@@ -62,6 +62,10 @@ Hard rules:
 | `z.string().email()` style Zod v3 API | Zod v4: `z.email()`, `z.uuid()`, strict objects |
 | `tailwind.config.js` | Tailwind v4 is CSS-first (`@import "tailwindcss"` + `@theme`) |
 | Modifying an order or payment status outside `settle_payment` | Single authority for state transitions |
+| Returning a service-role row without an explicit column list and a Zod DTO | Service role bypasses RLS, so a bare row leaks `access_token_hash`, unmasked PII, and internal ids |
+| Calling `settle_payment` with an outcome taken from the request body | The outcome must come from `adapter.fetchSettlement()` only |
+| `grant select on packages to service_role` | Checkout resolves `packageSlug` through the public (anon) read path; the RPC reads packages as its owner |
+| INSERT/UPDATE/DELETE grants on the five transactional tables to any client role or to `service_role` | The five `SECURITY DEFINER` functions are the only writer path (single-writer) |
 
 ## Constants that need an ADR to change
 

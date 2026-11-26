@@ -140,6 +140,11 @@ Rules the implementation must honour:
 
 - The token appears **only** inside `capabilityUrl`; it is never echoed as its own field and
   is never persisted in plaintext.
+- `packageSlug` is resolved to `package_id` through the **public read path** (`anon`
+  client, RLS `is_active = true`) — `service_role` has no `SELECT` on `packages` and must not
+  be granted one. `create_order_idempotent` then re-reads the package as its owner
+  (`postgres`) and re-checks `packages.is_active` **and** `destinations.is_active`, so the
+  RPC remains authoritative.
 - `totalIdr` is computed in SQL from `packages.price_idr × quantity`; a `price` field in the
   request is rejected by `strictObject` (`422`).
 - The same key with the same normalized payload returns the same `capabilityUrl`.
@@ -155,6 +160,10 @@ Errors: `422 VALIDATION_ERROR`, `404 NOT_FOUND` (package), `409 PACKAGE_INACTIVE
 Authorization: the token itself. `sha256(token)` must equal `orders.access_token_hash`,
 otherwise `404` with the same body as a nonexistent order.
 
+The handler runs with the service client (which bypasses RLS), so it **must** select an
+explicit column list and parse the result into a Zod DTO before responding. Returning a bare
+row would expose `access_token_hash`, unmasked PII, and internal ids.
+
 ```json
 {
   "orderNumber": "RML-4KQ9ZT",
@@ -163,6 +172,7 @@ otherwise `404` with the same body as a nonexistent order.
   "paymentStatus": "succeeded",
   "destinationName": "Japan",
   "packageName": "Japan 5 GB · 15 days",
+  "packageDataSnapshot": "5 GB · 15 hari",
   "quantity": 1,
   "unitPriceIdr": 145000,
   "totalIdr": 145000,
@@ -172,6 +182,9 @@ otherwise `404` with the same body as a nonexistent order.
   "notificationStatus": "sent"
 }
 ```
+
+`packageDataSnapshot` is the frozen per-unit description captured at checkout; `quantity` is
+displayed separately (the UI shows `{packageDataSnapshot} × {quantity}`).
 
 Customer email is masked. `access_token_hash`, internal UUIDs, and the idempotency key are
 never returned. `Cache-Control: no-store`.
@@ -187,6 +200,18 @@ The only endpoint that can trigger `settle_payment`.
 Flow: validate token against the payment's order → `adapter.fetchSettlement(ref)` →
 `settle_payment(ref, outcome)` → schedule outbox dispatch with `after()` when the result is
 `paid`.
+
+Trust boundary (mandatory):
+
+- The settlement outcome is taken **only** from `adapter.fetchSettlement(ref)`. The endpoint
+  never reads an outcome, status, or amount from the request body — the body carries only
+  `ref` and the capability `token`.
+- The adapter result is a discriminated union `'succeeded' | 'failed' | 'pending'`. When it is
+  `'pending'` the route returns `{ paymentStatus: 'pending' }` **without calling**
+  `settle_payment` (that function accepts only `succeeded`/`failed` and raises `22000`
+  otherwise). This branch is compiler-enforced.
+- `settle_payment` remains the single writer of `orders.status` / `payments.status`, and the
+  adapter does no state transition of its own — no duplicated responsibility.
 
 ```json
 { "orderStatus": "paid", "paymentStatus": "succeeded", "paidAt": "2026-11-28T03:12:44.000Z" }
@@ -276,7 +301,7 @@ upstream error. The admin can always submit the form manually.
 | --- | --- | --- |
 | `status` | `pending` \| `paid` \| `failed` | all |
 | `range` | `24h` \| `7d` \| `30d` | `7d` |
-| `q` | ≤ 64 chars; matches `order_number` or customer email (ILIKE) | — |
+| `q` | ≤ 64 chars; **exact match** on `order_number` (uppercased) or on `customer_email` (lowercased) | — |
 | `cursor` | opaque `base64(createdAt|id)` | first page |
 
 `limit` is fixed at 10; a supplied `limit` is ignored, never trusted.

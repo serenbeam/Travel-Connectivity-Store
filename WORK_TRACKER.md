@@ -63,7 +63,7 @@ Aturan tambahan:
 | Field | Nilai |
 | --- | --- |
 | Fase terakhir selesai | **E-2a Git Commit & Push — `COMPLETED`** (2026-11-26) |
-| Fase aktif | **E-3 Schema & RLS — `NOT STARTED`** (belum ada izin analysis/proposal) |
+| Fase aktif | **E-3 Schema & RLS — `NOT STARTED`** (dokumentasi direkonsiliasi 2026-11-26; implementasi belum diizinkan) |
 | Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
 | Fase selesai | **3 / 10 (30%)** + 1 checkpoint tanpa bobot (E-2a) |
@@ -73,7 +73,7 @@ Aturan tambahan:
 | Test dijalankan | **11 unit test lulus** (1 file) |
 | Deployment | **belum dikonfigurasi** |
 | Blocker terbuka | 3 (`KI-01`, `KI-02`, `KI-04`) |
-| Persetujuan yang ditunggu | 1 (E-3 **Analysis/Proposal**) |
+| Persetujuan yang ditunggu | 1 (izin **implementasi** E-3) |
 
 Ringkasan satu kalimat: **foundation aplikasi terpasang dan terverifikasi (G1–G12) serta
 ter-commit; database dan fitur bisnis belum dimulai.**
@@ -247,23 +247,27 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 
 ### E-3 — Schema & RLS — `NOT STARTED`
 
-- **Objective:** Menyediakan skema database, constraint, index, RLS, dan empat SQL function
+- **Objective:** Menyediakan skema database, constraint, index, RLS, dan lima SQL function
   yang menjadi dasar seluruh alur transaksi dan idempotency.
 - **Tasks:**
-  - [ ] Migration 1: 7 tabel + constraint + index
-  - [ ] Migration 2: RLS policy seluruh tabel + helper `is_admin()`
-  - [ ] Migration 3: `create_order_idempotent`, `settle_payment`, `claim_outbox`, `finish_outbox`
-  - [ ] Seed: 5 destinasi + 15 paket (idempoten)
-  - [ ] Integration test: constraint, transaksi, idempotency (termasuk 10 request paralel), RLS
-  - [ ] `npx supabase db reset` bersih dari kosong
+  - [x] Desain, audit, dan rekonsiliasi dokumentasi (D-1…D-11) — 2026-11-26
+  - [ ] Migration 1: fungsi helper (`is_admin`, guard terminal, validator I2/I5, `enforce_payment_amount`, `set_updated_at`) + hardening `SECURITY DEFINER`
+  - [ ] Migration 2: `destinations`, `packages` + constraint + index + trigger `BEFORE UPDATE`
+  - [ ] Migration 3: `orders`, `payments`, `idempotency_keys` + constraint + index + trigger I1/I2/I6
+  - [ ] Migration 4: `notification_outbox`, `mock_gateway_transactions` + index parsial + trigger I5
+  - [ ] Migration 5: 5 RPC (`create_order_idempotent`, `settle_payment`, `claim_outbox`, `finish_outbox`, `record_mock_settlement`)
+  - [ ] Migration 6: `ENABLE RLS` + **7 policy** + grant/revoke tabel + revoke CREATE schema
+  - [ ] Seed: 5 destinasi + 15 paket (idempoten), tanpa baris `auth.*`
+  - [ ] `src/lib/supabase/admin.ts` (`server-only`) + konfigurasi integration test + helper `ensureAdminUser` (Admin API)
+  - [ ] Integration test: constraint, transaksi, idempotency (10 request paralel), RLS + privilege matrix, terminal immutability, snapshot paket, B-01 state machine, outbox claim/fencing
+  - [ ] Verifikasi NV-01…NV-05 (NV-03a lokal; `db push` remote **dilarang** tanpa izin terpisah)
+  - [ ] `npx supabase db reset` dua kali: 6 migration, `destinations=5`, `packages=15`
 - **Status:** `NOT STARTED`
-- **Verification result:** Belum ada. Bukti yang diperlukan: migration apply dari kosong,
-  test idempotency & constraint hijau, test RLS membuktikan `anon` tidak membaca `orders`.
-- **Blockers / risks:** `KI-02` Supabase CLI belum terpasang (Docker tersedia) · kompleksitas
-  locking RPC (risiko tinggi, perlu test paralel nyata).
+- **Verification result:** Belum ada implementasi. Bukti yang diperlukan: dua `db reset` bersih, test constraint/idempotency/RLS hijau, NV-01…NV-05 lulus.
+- **Blockers / risks:** `KI-02` Supabase CLI belum terpasang (Docker tersedia) · kompleksitas trigger deferred (I2/I5) · estimasi melebihi slot tracker.
 - **Completion date:** —
-- **References:** `docs/database-design.md` §2–§6 · `docs/technical-decisions.md` ADR-4, ADR-6,
-  ADR-9 · `AGENTS.md` §Verification gates
+- **Estimasi:** implementasi + verifikasi **380 menit (6 j 20 m)**; rekonsiliasi dokumentasi 60 menit (selesai 2026-11-26). Total 440 menit; slot tracker 3 j 30 m → +3 j 50 m.
+- **References:** `docs/database-design.md` §2–§6 (5 RPC, 7 policy) · `docs/technical-decisions.md` ADR-4, ADR-6, ADR-7, ADR-9, ADR-10 · `docs/api-contract.md` §4.3–§4.6 · `AGENTS.md` §Forbidden patterns · RF-1…RF-8, CF-1
 
 ### E-4 — Storefront & Seed — `NOT STARTED`
 
@@ -405,6 +409,9 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-18 | 2026-11-26 | `typescript` 5.9.3 dan `eslint` 9.39.5 dipin eksak (bukan range) | Implemented | `package.json`; lihat KI-21 |
 | DL-19 | 2026-11-26 | `session.ts` tanpa `server-only`; batas rahasia ada di `env.ts` | Implemented | `src/lib/env.ts:1`, `src/modules/auth/session.ts:9` |
 | DL-20 | 2026-11-26 | `next-env.d.ts` di-ignore agar working tree tepat 25 file | Implemented | `.gitignore:9` |
+| DL-21 | 2026-11-26 | `service_role` tanpa DML pada 5 tabel transaksi; 5 RPC `SECURITY DEFINER` (owner `postgres`, `search_path=''`) satu-satunya penulis | Approved (desain) | DB §4, §5 · ADR-7 |
+| DL-22 | 2026-11-26 | `settle_payment` hanya `succeeded`/`failed`; `record_mock_settlement` menerima 3 outcome (`pending` boleh naik ke terminal, terminal immutable) | Approved (desain) | DB §5.2, §5.5 · API §4.5 |
+| DL-23 | 2026-11-26 | `orders.package_data_snapshot` (turunan deterministik), kardinalitas order→payment **at most one**, pencarian admin **exact match** | Approved (desain) | DB §1, §2.2, §2.3 · API §5.4 |
 
 ---
 
@@ -463,6 +470,7 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-26 | E-2 Foundation selesai: 25 file, 17 dependency, G1–G12 lulus | `COMPLETED` |
 | 2026-11-26 | E-2a checkpoint Git: commit `7ed8371` di `main`, `origin/main` sinkron | `COMPLETED` |
 | 2026-11-26 | E-2b: tracker disinkronkan dengan E-2/E-2a; dokumen baseline & kode tidak diubah | `COMPLETED` |
+| 2026-11-26 | E-3 rekonsiliasi dokumentasi D-1…D-11 (5 dokumen); implementasi tetap belum diizinkan | `COMPLETED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:

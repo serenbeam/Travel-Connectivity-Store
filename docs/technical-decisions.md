@@ -148,6 +148,21 @@ simulation page, gated by `MOCK_GATEWAY_ENABLED` and returning `404` in producti
 integration would be. **The mock is a simulation, not evidence of a production payment
 integration**: no card data, no provider signature, no settlement, no reconciliation.
 
+**Trust boundary (E-3 resolution).** The outcome passed to `settle_payment` is taken only
+from `adapter.fetchSettlement(ref)`; the route never reads an outcome from the request body.
+The adapter result is a discriminated union (`'succeeded' | 'failed' | 'pending'`), and
+`settle_payment` accepts only `succeeded`/`failed` — a `pending` result is returned to the
+client by the route without calling the RPC. Simulated gateway state is written through
+`record_mock_settlement` (three outcomes, `pending` may advance to terminal, terminal is
+immutable), which touches the provider table only.
+
+**Privilege model.** `service_role` holds **no** INSERT/UPDATE/DELETE on `orders`,
+`payments`, `idempotency_keys`, `notification_outbox`, `mock_gateway_transactions`. The five
+`SECURITY DEFINER` functions owned by `postgres` are the only writers (single-writer), and
+they run with `search_path = ''`, schema-qualified names, and `REVOKE ALL … FROM PUBLIC`
+before `GRANT EXECUTE … TO service_role`. RLS does **not** protect service-role queries
+(`BYPASSRLS`); its safety comes from missing grants plus triggers/constraints.
+
 **Rejected.** Client-posted `paymentStatus` (browser as source of truth — explicitly
 forbidden); stubbing the whole flow in tests only (nothing to demonstrate).
 
@@ -234,6 +249,20 @@ would remove shareable links and add complexity, which is not worth it at MVP sc
 
 **Rejected.** Token in query string (worse: appears in more logs); token in `localStorage`
 plus a lookup screen (turns a link into an account system).
+
+**Related operational limits (accepted).**
+
+- **Admin revocation lag.** `requireAdmin()` reads a fresh user from Supabase Auth
+  (`getUser()`), but RLS evaluates the signed JWT claim (`auth.jwt()`). A revoked admin can
+  therefore keep RLS-backed access until the current access token expires. Mitigation: set
+  the JWT expiry to **≤ 900 s**; do not claim instant revocation across existing sessions.
+- **Idempotency key rotation.** Rotating `IDEMPOTENCY_TOKEN_KEY` makes earlier sealed replay
+  tokens undecryptable; those replays return `409 IDEMPOTENCY_REPLAY_UNAVAILABLE`. Accepted
+  without a KMS.
+- **Idempotency retention.** Rows are never deleted in the MVP: after the 24 h replay window
+  a key returns `IDEMPOTENCY_EXPIRED` permanently and can never create a second order. A
+  cleanup job must not be added without a tombstone, otherwise a stale retry would create a
+  new order.
 
 ---
 

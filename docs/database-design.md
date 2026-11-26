@@ -23,7 +23,7 @@ erDiagram
   destinations ||--o{ packages : "has"
   destinations ||--o{ orders : "referenced by"
   packages ||--o{ orders : "referenced by"
-  orders ||--|| payments : "exactly one"
+  orders ||--o| payments : "at most one"
   orders ||--o| idempotency_keys : "checkout result"
   orders ||--o| notification_outbox : "at most one"
 
@@ -79,7 +79,7 @@ Relationship summary:
 | --- | --- | --- |
 | destination → packages | 1..n | FK, `ON DELETE RESTRICT` |
 | order → destination, package | n..1 each | FK `RESTRICT` + name/price snapshots on the order |
-| **order → payment** | **exactly 1** | `payments.order_id UNIQUE` (ADR-7 boundary, one attempt) |
+| **order → payment** | **at most 1** (0..1; row is created together with the order by `create_order_idempotent`) | `payments.order_id UNIQUE` + `NOT NULL`. The constraint only caps at one; existence is guaranteed by the single-writer RPC, not by a constraint |
 | order → idempotency key | 0..1 | nullable `idempotency_keys.order_id` |
 | order → outbox row | 0..1 | `notification_outbox.order_id UNIQUE` |
 
@@ -133,8 +133,23 @@ Table constraints:
 
 ```sql
 UNIQUE (destination_id, slug)
-CHECK (is_unlimited OR data_mb > 0)
+
+-- A NULL data_mb must never pass for a metered package. `NULL > 0` evaluates to NULL,
+-- and a CHECK fails only on FALSE, so the previous form
+-- `CHECK (is_unlimited OR data_mb > 0)` accepted (is_unlimited=false, data_mb=NULL).
+CHECK (
+  (is_unlimited AND data_mb IS NULL)
+  OR (NOT is_unlimited AND data_mb IS NOT NULL AND data_mb > 0)
+)
+
+-- Ceiling keeps unit_price_idr * quantity (max 5) inside int4 (2,147,483,647).
+CHECK (price_idr BETWEEN 1 AND 100000000)
+CHECK (compare_at_price_idr IS NULL OR compare_at_price_idr > price_idr)
+CHECK (validity_days BETWEEN 1 AND 90)
 ```
+
+`price_idr >= 1` (not `>= 0`) so a free package cannot create a payment whose
+`amount_idr` is 0, which `payments.amount_idr > 0` would reject.
 
 ### 2.3 `orders`
 
@@ -147,6 +162,7 @@ CHECK (is_unlimited OR data_mb > 0)
 | `package_id` | uuid | not null, FK → `packages(id)` `RESTRICT` |
 | `destination_name_snapshot` | text | not null |
 | `package_name_snapshot` | text | not null |
+| `package_data_snapshot` | text | not null — per-unit content, e.g. `5 GB · 15 hari`, `Unlimited · 7 hari` |
 | `customer_name` | text | not null |
 | `customer_email` | text | not null, stored lowercased |
 | `customer_phone` | text | not null, normalized E.164-ish (`+62…`) |
@@ -159,6 +175,24 @@ CHECK (is_unlimited OR data_mb > 0)
 
 There is **no** token column and **no** `expired` status. Snapshots freeze the commercial
 terms so a later package edit does not rewrite history.
+
+`package_data_snapshot` is derived by `create_order_idempotent` from the package columns
+that actually exist (`data_mb`, `is_unlimited`, `validity_days`) — `packages` has no such
+column itself:
+
+```sql
+case
+  when p.is_unlimited then 'Unlimited · ' || p.validity_days::text || ' hari'
+  when p.data_mb % 1024 = 0
+    then (p.data_mb / 1024)::text || ' GB · ' || p.validity_days::text || ' hari'
+  else p.data_mb::text || ' MB · ' || p.validity_days::text || ' hari'
+end
+```
+
+The rule is deterministic and rounds nothing (`5120` → `5 GB`, `3000` → `3000 MB`). The
+package CHECK guarantees `data_mb IS NULL` only when `is_unlimited` is true, so the other
+branches never receive NULL. The string is per unit; the UI renders totals as
+`{snapshot} × {quantity}`.
 
 ### 2.4 `payments`
 
@@ -218,6 +252,22 @@ enforced in the function, not by a cleanup job.
 
 No `event_type` (one event per order), no `next_attempt_at` (no scheduler).
 
+Payload CHECK — the payload must carry every key of the notification contract (extra keys
+are allowed, and adding one later needs no migration):
+
+```sql
+CHECK (
+  payload ? 'notificationId' AND payload ? 'orderNumber' AND payload ? 'totalIdr'
+  AND payload ? 'customerName'  AND payload ? 'customerEmail' AND payload ? 'paidAt'
+  AND payload ? 'destinationName' AND payload ? 'packageName'
+  AND payload ? 'packageDataSnapshot'
+)
+```
+
+`payload.notificationId` must equal `id`; that cross-column equality is set inside
+`settle_payment` (insert uses `RETURNING id`) and asserted by an integration test, because a
+CHECK cannot compare two columns of the same row reliably against a JSON value.
+
 ### 2.7 `mock_gateway_transactions`
 
 | Column | Type | Constraints |
@@ -229,7 +279,40 @@ No `event_type` (one event per order), no `next_attempt_at` (no scheduler).
 | `created_at` | timestamptz | not null, default `now()` |
 
 Owned by the simulated provider. No FK to `orders`/`payments`: the simulation route cannot
-cascade into business state.
+cascade into business state. Writes go through `record_mock_settlement` only (§5.5); no client
+role has `INSERT` here.
+
+### 2.8 Triggers and invariants (no new table)
+
+Every invariant below is enforced **in the database**, so it holds even for `service_role`
+(which bypasses RLS but not triggers or constraints).
+
+| Invariant | Statement | Enforced by |
+| --- | --- | --- |
+| **I1** | `payments.amount_idr = orders.total_idr` | `enforce_payment_amount` (BEFORE INSERT/UPDATE on `payments`) |
+| **I2** | `orders.status = 'paid'` ⟺ `payments.status = 'succeeded'` | constraint triggers `payments_i2` and `orders_i2` (`AFTER … DEFERRABLE INITIALLY DEFERRED`) |
+| **I3** | `status = 'paid'` ⟺ `paid_at IS NOT NULL` (both tables) | `CHECK ((status = 'paid') = (paid_at IS NOT NULL))` / `((status = 'succeeded') = …)` |
+| **I4** | `failure_code` present only when `status = 'failed'` | two `CHECK`s on `payments` |
+| **I5** | outbox exists ⟺ order is `paid`, exactly one row | `guard_outbox_order_is_paid` (BEFORE, immediate) + constraint triggers `outbox_i5` and `orders_i5` (deferred) |
+| **I6** | terminal rows are immutable | `orders_before_update` / `payments_before_update` (raise `22000` when `OLD.status` is terminal) |
+| **I7** | at most one payment per order | `UNIQUE (order_id)` |
+| **I8** | price computed server-side | `create_order_idempotent` is the only `INSERT` into `orders`; plus I1/I3 |
+| **I9** | settlement is atomic across payment + order + outbox | `settle_payment` is the only status writer; plus I2/I5/I6 |
+
+Notes that keep the triggers consistent:
+
+- `orders_before_update` and `payments_before_update` are **single** `BEFORE UPDATE` triggers that
+  both reject terminal rows and set `updated_at`. One trigger avoids non-deterministic ordering
+  between a separate `set_updated_at` and the terminal guard.
+- Deferred triggers are validated at **COMMIT** under READ COMMITTED, so `settle_payment` may
+  write payment → order → outbox in any order within one transaction; only the final state is
+  judged.
+- `assert_order_payment_consistency` and `assert_outbox_matches_paid` read the affected order
+  ids from `OLD` **and** `NEW`, so a `payments.order_id` change `A → B` validates both sides. A
+  missing referenced order raises instead of being skipped.
+- Placement (functions must exist before the tables that attach the triggers): migration 1
+  creates the functions; the `BEFORE`/constraint triggers are created together with their
+  tables in migrations 2–4.
 
 ## 3. Indexes
 
@@ -259,11 +342,21 @@ RLS is enabled on **every** table. Default posture is deny.
 
 ```sql
 -- Admin identity, evaluated from the JWT claim set by Supabase Auth.
-create or replace function is_admin() returns boolean
+create or replace function public.is_admin() returns boolean
 language sql stable as $$
   select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false);
 $$;
+
+-- Only the role that actually evaluates the admin policies may execute it.
+-- Policies are evaluated as the querying role, and every policy that calls
+-- is_admin() targets `authenticated`. anon never calls it; service_role bypasses RLS
+-- and never calls it either. SECURITY DEFINER functions run as their owner
+-- (postgres), which always has implicit rights on its own function.
+revoke all on function public.is_admin() from public, anon, service_role;
+grant execute on function public.is_admin() to authenticated;
 ```
+
+**7 policies** (deny by default everywhere else):
 
 | Table | Policy | Role | Rule |
 | --- | --- | --- | --- |
@@ -271,25 +364,85 @@ $$;
 | `destinations` | `dest_admin_all` | `authenticated` | `is_admin()` |
 | `packages` | `pkg_public_read` | `anon`, `authenticated` | `is_active = true` |
 | `packages` | `pkg_admin_all` | `authenticated` | `is_admin()` |
-| `orders` | — | — | **no policy**: no direct client access |
-| `payments` | — | — | **no policy**: no direct client access |
-| `idempotency_keys` | — | — | **no policy** |
-| `notification_outbox` | — | — | **no policy** (admin reads via server route) |
-| `mock_gateway_transactions` | `mgt_insert_sim` | `anon` | `INSERT` only, when the simulation route is enabled |
-| `mock_gateway_transactions` | — | — | no `SELECT`/`UPDATE`/`DELETE` for clients |
+| `orders` | `orders_admin_read` | `authenticated` | `is_admin()` |
+| `payments` | `payments_admin_read` | `authenticated` | `is_admin()` |
+| `notification_outbox` | `outbox_admin_read` | `authenticated` | `is_admin()` |
+
+`orders`, `payments`, `idempotency_keys`, `notification_outbox` and
+`mock_gateway_transactions` have **no** anon policy and **no** INSERT/UPDATE/DELETE policy
+for any client role.
+
+### Table privileges (the layer below RLS)
+
+| Table | `anon` | `authenticated` | `service_role` | Write path |
+| --- | --- | --- | --- | --- |
+| `destinations` | SELECT | SELECT, INSERT, UPDATE, DELETE | — | `authenticated` + RLS `is_admin()` |
+| `packages` | SELECT | SELECT, INSERT, UPDATE, DELETE | — | idem |
+| `orders` | — | SELECT (RLS `is_admin()`) | SELECT | `create_order_idempotent`, `settle_payment` |
+| `payments` | — | SELECT (RLS `is_admin()`) | SELECT | idem |
+| `idempotency_keys` | — | — | — | `create_order_idempotent` (read/write internally) |
+| `notification_outbox` | — | SELECT (RLS `is_admin()`) | SELECT | `settle_payment` (INSERT), `claim_outbox`, `finish_outbox` |
+| `mock_gateway_transactions` | — | — | SELECT | `record_mock_settlement` |
+
+```sql
+-- service_role deliberately has no write privilege on the transactional tables:
+-- the five SECURITY DEFINER functions are the only writers (single-writer).
+revoke insert, update, delete on
+  public.orders, public.payments, public.idempotency_keys,
+  public.notification_outbox, public.mock_gateway_transactions
+  from anon, authenticated, service_role;
+
+-- The app never needs to write catalog rows through service_role either.
+revoke all on public.destinations, public.packages from service_role;
+
+grant select on public.destinations, public.packages to anon, authenticated;
+grant insert, update, delete on public.destinations, public.packages to authenticated;
+grant select on public.orders, public.payments, public.notification_outbox,
+  public.mock_gateway_transactions to service_role;
+grant select on public.orders, public.payments, public.notification_outbox to authenticated;
+```
+
+**Function privileges**
+
+| Function | `anon` | `authenticated` | `service_role` |
+| --- | --- | --- | --- |
+| `public.is_admin()` | — | EXECUTE | — |
+| `create_order_idempotent`, `settle_payment`, `claim_outbox`, `finish_outbox`, `record_mock_settlement` | — | — | EXECUTE |
+| `assert_order_payment_consistency`, `assert_outbox_matches_paid`, `guard_outbox_order_is_paid`, `orders_before_update`, `payments_before_update`, `set_updated_at`, `enforce_payment_amount` | — | — | — (trigger-only; trigger invocation does not check EXECUTE) |
+
+**Hardening for `SECURITY DEFINER` (all five RPCs and all trigger functions)**
+
+- `set search_path = ''` and fully schema-qualified object names;
+- `alter function … owner to postgres`;
+- `revoke all on function … from public` (PostgreSQL grants EXECUTE to PUBLIC by default);
+- `revoke create on schema public from public, anon, authenticated, service_role`.
+
+**RLS does not protect service role.** `service_role` has `BYPASSRLS`, so policies are not
+evaluated for it; its safety comes from the missing write grants plus the triggers and
+constraints, not from RLS. Conversely `postgres` (function owner) bypasses RLS as table
+owner, which is why the definer validators can read business rows regardless of the caller.
 
 Consequences:
 
 - Guest order reads never go through `anon`. The route handler validates the capability
-  token with the service client and returns an explicit field whitelist.
+  token with the service client and returns an explicit column whitelist (plus a Zod DTO,
+  see `AGENTS.md`).
 - The service role is used **only** after an authorization decision in server code
   (`requireAdmin()` or capability-token match), never as a shortcut for client requests.
-- Integration tests must assert `select` on `orders` as `anon` returns zero rows / errors.
+- Admin catalog and admin list reads travel through the **authenticated** client so that
+  RLS (not the service key) is the enforcing layer; `requireAdmin()` is still called first.
+- Integration tests must assert `select` on `orders` as `anon` fails (`42501`) and as a
+  non-admin `authenticated` user returns zero rows.
+- `anon` has no INSERT path into `mock_gateway_transactions`; the simulation route writes
+  through `record_mock_settlement` as the server.
 
 ## 5. SQL functions
 
-All are `security definer` with `search_path = public`, executable only by the service role
-(`revoke execute ... from anon, authenticated`). Node calls them via `supabase.rpc()`.
+Five functions are `security definer`, owned by `postgres`, with `search_path = ''`
+(schema-qualified inside), and executable only by the service role
+(`revoke all ... from public, anon, authenticated` then `grant execute ... to service_role`).
+Node calls them via `supabase.rpc()`. Trigger functions are also `security definer` but get
+no EXECUTE grant — triggers do not check the caller's EXECUTE privilege.
 
 ### 5.1 `create_order_idempotent`
 
@@ -333,20 +486,34 @@ concurrent duplicates either replay or block, never duplicate.
 
 ```sql
 settle_payment(p_provider_reference text, p_outcome text) returns jsonb
--- → {outcome: 'applied'|'unchanged'|'still_pending'|'not_found',
---    order_status, payment_status}
+-- → {outcome: 'applied'|'unchanged'|'not_found', order_status, payment_status}
 ```
 
+Validation (explicit, no NULL passthrough):
+
+- `p_provider_reference IS NULL` or length outside 8..64 → `RAISE '22000'` (`INVALID_REF`)
+- `p_outcome IS NULL` or not in (`'succeeded'`, `'failed'`) → `RAISE '22000'` (`INVALID_OUTCOME`)
+
+`'pending'` is **not** accepted here: settling means applying a terminal gateway decision.
+A pending gateway result is handled by the E-5 verify route, which returns
+`{ paymentStatus: 'pending' }` **without** calling this function. The adapter contract types
+the result as a discriminated union (`'succeeded' | 'failed' | 'pending'`) so the compiler
+forces that branch.
+
 1. `SELECT ... FROM payments WHERE provider_reference = $1 FOR UPDATE`.
-2. `status <> 'pending'` → `unchanged` (idempotent, no writes).
-3. `p_outcome = 'succeeded'` → payment `succeeded` + `paid_at`; order `pending → paid` +
+2. Row missing → `not_found`.
+3. `status <> 'pending'` → `unchanged` (idempotent, no writes).
+4. `p_outcome = 'succeeded'` → payment `succeeded` + `paid_at`; order `pending → paid` +
    `paid_at`; then insert the outbox row
    (`ON CONFLICT (order_id) DO NOTHING`) with the minimized payload.
-4. `p_outcome = 'failed'` → payment `failed` (+`failure_code`); order `pending → failed`.
+5. `p_outcome = 'failed'` → payment `failed` (+`failure_code`); order `pending → failed`.
    No outbox row.
-5. `p_outcome = 'pending'` → `still_pending`, no writes.
 
 Every `UPDATE` carries `AND status = 'pending'`. `failed` and `paid` are terminal.
+
+All five RPCs assume **READ COMMITTED** (the PostgREST/Supabase default). No
+`SET TRANSACTION`, no advisory locks, no retry framework. `claim_outbox(p_order_id)`
+accepts `NULL` as a documented sentinel meaning "any eligible row", not a missing value.
 
 ### 5.3 `claim_outbox`
 
@@ -397,6 +564,58 @@ UPDATE notification_outbox
 `0 rows` → `stale`: a newer claim owns the row; the caller changes nothing and logs a
 warning. This is what prevents a slow dispatcher from overwriting a newer attempt.
 
+`p_id`, `p_locked_at` or `p_ok` being NULL → `RAISE '22000'` (explicit validation).
+
+### 5.5 `record_mock_settlement`
+
+```sql
+record_mock_settlement(p_ref text, p_outcome text) returns jsonb
+-- → {outcome, recorded:boolean, transition:'created'|'pending_to_terminal'|'replay'|'conflict'}
+```
+
+Owns the simulated provider's own table (`mock_gateway_transactions`) and **never** touches
+`orders` or `payments` — it cannot replace `settle_payment`.
+
+Validation: `p_ref IS NULL` or length outside 8..64 → `RAISE '22000'`;
+`p_outcome IS NULL` or not in (`'pending'`, `'succeeded'`, `'failed'`) → `RAISE '22000'`.
+
+State machine (a `pending` record **may** advance to a terminal outcome; a terminal record
+is immutable):
+
+| Stored | Incoming | Behaviour | Response |
+| --- | --- | --- | --- |
+| none | any valid | `INSERT` | `created` |
+| `pending` | `pending` | replay, no write | `replay` |
+| `pending` | `succeeded` / `failed` | transition allowed | `pending_to_terminal` |
+| terminal | same | replay, no write | `replay` |
+| terminal | different terminal | **no overwrite** | `conflict` (returns the stored value) |
+
+```sql
+-- (1) pending -> terminal (locks the existing row)
+UPDATE public.mock_gateway_transactions SET outcome = p_outcome
+ WHERE provider_reference = p_ref AND outcome = 'pending'
+   AND p_outcome IN ('succeeded','failed');
+IF FOUND THEN RETURN jsonb_build_object('outcome',p_outcome,'recorded',true,'transition','pending_to_terminal'); END IF;
+
+-- (2) brand-new reference
+INSERT INTO public.mock_gateway_transactions (provider_reference, outcome)
+VALUES (p_ref, p_outcome) ON CONFLICT (provider_reference) DO NOTHING;
+IF FOUND THEN RETURN jsonb_build_object('outcome',p_outcome,'recorded',true,'transition','created'); END IF;
+
+-- (3) existing terminal row: replay or conflict. FOUND is checked, never a NULL value.
+SELECT outcome INTO v_stored FROM public.mock_gateway_transactions WHERE provider_reference = p_ref;
+v_found := FOUND;
+IF NOT v_found THEN RAISE EXCEPTION 'MOCK_RECORD_MISSING' USING ERRCODE = '22000'; END IF;
+IF v_stored = p_outcome
+  THEN RETURN jsonb_build_object('outcome',v_stored,'recorded',false,'transition','replay');
+  ELSE RETURN jsonb_build_object('outcome',v_stored,'recorded',false,'transition','conflict');
+END IF;
+```
+
+Concurrency: `UNIQUE (provider_reference)` serialises competing calls; step (1) takes a row
+lock, so two simultaneous `pending → terminal` transitions cannot both apply (first wins,
+second returns `conflict`). `created_at` is never modified on transition.
+
 ## 6. Transaction boundaries
 
 | Operation | Unit of atomicity |
@@ -405,9 +624,12 @@ warning. This is what prevents a slow dispatcher from overwriting a newer attemp
 | Payment settlement | `settle_payment` (payment + order + outbox row) |
 | Notification claim | `claim_outbox` (single `UPDATE`) |
 | Notification completion | `finish_outbox` (single fenced `UPDATE`) |
+| Mock settlement record | `record_mock_settlement` (single `INSERT`/`UPDATE` on the provider table only) |
 | Admin CRUD | one statement per request; no cross-table invariant |
 
 Nothing else may write `orders.status`, `payments.status`, or `notification_outbox.status`.
+`service_role` holds no INSERT/UPDATE/DELETE on the transactional tables, so the five RPC
+functions above are the only writer paths.
 
 ## 7. Seed data
 
