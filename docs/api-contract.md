@@ -368,6 +368,18 @@ The payload hash is computed over the Zod-normalized object, so key order and wh
 not affect it. The client must treat the `Idempotency-Key` as a secret: per-checkout-session,
 `sessionStorage` only, never in a URL.
 
+Lifecycle: a key identifies **one checkout attempt**. It is generated on the first submit of a
+package, reused for every retry of that attempt (a timeout must replay the same order), released
+when the server reports `409 IDEMPOTENCY_CONFLICT` / `409 IDEMPOTENCY_EXPIRED` (that attempt can
+never succeed), and released once a successful order's navigation to the payment page has
+actually completed. A later purchase of the same package therefore starts a new attempt with a
+fresh key and creates a new order, even if the previous order is still `pending` or `failed`.
+
+When `sessionStorage` is unavailable or throws, the client keeps the key in memory for the
+lifetime of the page load, so a retry of the same attempt still replays the same order instead of
+creating a second one. That fallback does not survive a reload; with storage blocked, reloading
+mid-attempt starts a new attempt.
+
 ## 7. Outbox / notification payload
 
 Sent to `N8N_WEBHOOK_URL` with `X-Webhook-Secret`. Minimal by design:
