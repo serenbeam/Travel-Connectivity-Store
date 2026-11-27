@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import { fromPriceOf, packageCountOf } from './derive';
@@ -187,4 +189,47 @@ function stripPackages<T extends { packages: unknown }>(row: T): Omit<T, 'packag
   delete copy.packages;
 
   return copy as Omit<T, 'packages'>;
+}
+
+/**
+ * Internal resolver for checkout (E-5).
+ *
+ * Returns the package UUID for an active `(destinationSlug, packageSlug)` pair through the
+ * same anon read path as {@link getPackageByRoute} — RLS still hides inactive rows — so the
+ * server can pass `package_id` to `create_order_idempotent` without ever exposing internal
+ * ids to the browser. `null` means "no such active package" and maps to 404/409.
+ */
+export async function resolveActivePackageId(
+  destinationSlug: string,
+  packageSlug: string,
+): Promise<{ packageId: string; destinationName: string; packageName: string } | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('packages')
+    .select('id,name,destinations!inner(slug,name)')
+    .eq('slug', packageSlug)
+    .eq('destinations.slug', destinationSlug)
+    .maybeSingle();
+
+  if (error) {
+    throw new CatalogQueryError('resolveActivePackageId', error.message);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const parsed = z
+    .strictObject({
+      id: z.uuid(),
+      name: z.string().min(1),
+      destinations: z.strictObject({ slug: z.string(), name: z.string().min(1) }),
+    })
+    .parse(data);
+
+  return {
+    packageId: parsed.id,
+    destinationName: parsed.destinations.name,
+    packageName: parsed.name,
+  };
 }
