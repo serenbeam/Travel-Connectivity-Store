@@ -62,21 +62,21 @@ Aturan tambahan:
 
 | Field | Nilai |
 | --- | --- |
-| Fase terakhir selesai | **E-4 Storefront & Seed — `CLOSED`** (2026-11-27, 4 commit lokal) |
-| Fase aktif | **E-5 Checkout, Payment & Idempotency — `VERIFIED`** (belum di-commit) |
-| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
+| Fase terakhir selesai | **E-5 Checkout, Payment & Idempotency — `CLOSED`** (2026-11-27, 3 commit + push) |
+| Fase aktif | **E-5 Checkout, Payment & Idempotency — `CLOSED`** · berikutnya E-6 (belum dimulai) |
+| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · E-5: `5fc02d6`, `5565b5b`, `220517c` (ter-push) · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
-| Fase selesai | **4 / 10 (42%)** + 1 checkpoint tanpa bobot (E-2a) |
+| Fase selesai | **5 / 10 (60%)** + 1 checkpoint tanpa bobot (E-2a) |
 | Acceptance criteria terverifikasi | **27 penuh + 4 database-scope + 11 pending / 42** (E-5 memverifikasi 18 AC baru; sisa database-scope: T7, T10, T11, T15 — menunggu E-7) |
-| Kode aplikasi | **34 file** di `src/**` (`.ts`/`.tsx`): 14 ter-track sebelum E-4, 20 baru dari E-4; 1 placeholder (`src/app/page.tsx`) dihapus |
+| Kode aplikasi | **52 file** di `src/**` (`.ts`/`.tsx`): 34 sebelum E-5, 19 ditambahkan E-5 (1 placeholder dihapus di E-4) |
 | Migration | **6** (`supabase/migrations/`) |
 | Test dijalankan | **59 unit** (6 file) + **85 integration** (8 file) + smoke HTTP 27/27 |
 | Deployment | **belum dikonfigurasi** |
-| Blocker terbuka | **0 untuk E-4** · 1 project-level (`KI-04`, milik E-7) |
-| Persetujuan yang ditunggu | **push manual oleh user** (4 commit E-4 sudah lokal) |
+| Blocker terbuka | **0 untuk E-4/E-5** · 1 project-level (`KI-04`, milik E-7) |
+| Persetujuan yang ditunggu | tidak ada untuk E-5 (3 commit sudah di-push) · E-6 menunggu analisis tersendiri |
 
-Ringkasan satu kalimat: **E-4 storefront `CLOSED` dengan empat commit lokal (belum di-push);
-E-5…E-9 berstatus HOLD dan belum dimulai.**
+Ringkasan satu kalimat: **E-5 checkout/payment/order `CLOSED` dan ter-push (`220517c`);
+E-6…E-9 berstatus `NOT STARTED`.**
 
 ---
 
@@ -91,7 +91,7 @@ E-5…E-9 berstatus HOLD dan belum dimulai.**
 | E-2 | Foundation | `COMPLETED` | 10% |
 | E-3 | Schema & RLS | `CLOSED` | 12% |
 | E-4 | Storefront & Seed | `CLOSED` | 12% |
-| E-5 | Checkout, Payment & Idempotency | `VERIFIED` (belum di-commit) | 18% |
+| E-5 | Checkout, Payment & Idempotency | `CLOSED` | 18% |
 | E-6 | Admin CMS | `NOT STARTED` | 12% |
 | E-7 | n8n & Outbox | `NOT STARTED` | 8% |
 | E-8 | Testing & Polish | `NOT STARTED` | 5% |
@@ -359,7 +359,7 @@ compare-at price display · breadcrumb (dipasang minimal) · `loading.tsx` skele
 halaman · dua public JSON endpoint · mobile sticky bottom bar · font self-hosted · sort/search
 katalog · RTL/component test.
 
-### E-5 — Checkout, Payment & Idempotency — `VERIFIED` (belum di-commit)
+### E-5 — Checkout, Payment & Idempotency — `CLOSED`
 
 - **Objective:** Alur checkout guest sampai status order final dengan pembayaran yang hanya
   berubah melalui verifikasi server dan idempotency yang tahan konkurensi.
@@ -371,7 +371,11 @@ katalog · RTL/component test.
   - [x] `GET /api/orders/[token]` + halaman order status `/orders/[token]`
   - [x] Header capability (`no-referrer`, `no-store`, `noindex`) + 0 third-party request
   - [x] Unit test (59 total) + smoke test HTTP 27/27 pada server produksi lokal
-- **Status:** `VERIFIED` — implementasi dan verifikasi lokal selesai; **belum di-commit**.
+- **Status:** `CLOSED` — 2026-11-27. Implementasi, verifikasi, tiga commit, dan push selesai.
+  `origin/main` = `220517c`.
+- **Git (3 commit, ter-push):** `5fc02d6` feat(e5) guest checkout, mock payment & order status
+  (19 file) · `5565b5b` test(e5) token/schema/hash (3 file) · `220517c` docs(e5) implementation &
+  verification (3 file) · push fast-forward `dcbd315..220517c` ke `origin/main`, tanpa force.
 - **Verification result:** lint 0/0 · typecheck 0 · unit **59/59** · build produksi hijau
   (12 route) · **smoke HTTP 27/27 PASS**: 201 created · replay 200 dengan `capabilityUrl`
   identik · key sama + payload beda → 409 conflict · tanpa header → 400 · `price`/qty 6/email
@@ -386,7 +390,13 @@ katalog · RTL/component test.
   outbox di dalam transaksi `settle_payment`).
 - **Blockers / risks:** **Blocker E-5: 0.** `KI-24` tertutup. `KI-25` (429) tetap risiko
   eksternal E-4. `KI-04` tetap project-level milik E-7.
-- **Completion date:** —
+- **Completion date:** 2026-11-27
+- **Handoff ke E-6:** baseline commit = commit penutupan ini (di atas `220517c`). Tersedia:
+  storefront (`/`, `/destinations`, detail destinasi & paket), `/checkout`,
+  `POST /api/checkout`, `POST /api/payments/verify`, `POST /api/mock-gateway/[ref]/settle`,
+  `GET /api/orders/[token]`, `/orders/[token]`, `/mock-gateway/[ref]`. E-6 memakai fondasi yang
+  sudah ada: `requireAdmin()` + `src/proxy.ts` + RLS `is_admin()` (E-3) + `createAdminClient()`.
+  E-6 **tidak** perlu mengubah skema, RPC, atau kontrak E-5. E-3 tetap `CLOSED`.
 - **References:** `docs/api-contract.md` §4.3–§4.6, §6 · `docs/database-design.md` §5.1–§5.2 ·
   `docs/mvp-scope.md` §6.1–§6.2, §6.4 · `docs/technical-decisions.md` ADR-5, ADR-6, ADR-7, ADR-10
 
@@ -546,7 +556,7 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | NA-09 | Analisis + proposal + implementasi + commit lokal E-4 (Tier P1–P4) | NA-07 | Selesai (`96b69b2`, `33d99f6`, `23f25b4` + commit penutupan) |
 | NA-10 | Push empat commit E-4 ke `origin/main` | NA-09 | **Selesai** 2026-11-27 (`83f961b..dcbd315`, fast-forward) |
 | NA-11 | Analisis + implementasi + verifikasi + commit lokal E-5 | NA-10 | **Selesai** (`feat`/`test`/`docs` E-5) |
-| NA-12 | **Push manual** tiga commit E-5 ke `origin/main` | NA-11 | **Ya (pemilik proyek)** |
+| NA-12 | Push tiga commit E-5 ke `origin/main` | NA-11 | **Selesai** 2026-11-27 (`dcbd315..220517c`, fast-forward) |
 | NA-13 | Mulai **E-6 Analysis/Proposal** (bukan izin implementasi) | NA-12 | **Ya (pemilik proyek)** |
 
 Urutan yang disarankan: **NA-10** (push manual) → **NA-11** (mulai E-5 Analysis/Proposal) → implementasi E-5 hanya setelah proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
@@ -593,6 +603,8 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-27 | E-4 penutupan: 4 commit lokal (`96b69b2`, `33d99f6`, `23f25b4`, commit penutupan), gate lint/typecheck/unit 32-32/production build semuanya PASS, working tree bersih; **belum di-push** | `CLOSED` |
 | 2026-11-27 | E-4 push ke `origin/main`: `83f961b..dcbd315` (fast-forward, tanpa force) | `CLOSED` |
 | 2026-11-27 | E-5 implementasi + verifikasi lokal: checkout/payment/order flow, 3 API + 3 halaman, 27 unit test baru, smoke HTTP 27/27, gate hijau; `KI-24` ditutup; **belum di-commit** | `VERIFIED` |
+| 2026-11-27 | E-5 tiga commit lokal: `5fc02d6` feat (19 file), `5565b5b` test (3), `220517c` docs (3) | `VERIFIED` |
+| 2026-11-27 | E-5 penutupan + push: `dcbd315..220517c` fast-forward ke `origin/main` (tanpa force); status → `CLOSED`; progres 5/10 (60%) | `CLOSED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:
