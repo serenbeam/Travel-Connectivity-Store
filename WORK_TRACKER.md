@@ -63,20 +63,20 @@ Aturan tambahan:
 | Field | Nilai |
 | --- | --- |
 | Fase terakhir selesai | **E-2a Git Commit & Push — `COMPLETED`** (2026-11-26) |
-| Fase aktif | **E-3 Schema & RLS — `NOT STARTED`** (dokumentasi direkonsiliasi 2026-11-26; implementasi belum diizinkan) |
+| Fase aktif | **E-3 Schema & RLS — `COMPLETED`** (implementasi + verifikasi 2026-11-27; **belum di-commit**) |
 | Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
 | Fase selesai | **3 / 10 (30%)** + 1 checkpoint tanpa bobot (E-2a) |
-| Acceptance criteria terverifikasi | **0 / 42** |
-| Kode aplikasi | **25 file foundation**, 0 fitur bisnis |
-| Migration | **0** (belum dibuat) |
-| Test dijalankan | **11 unit test lulus** (1 file) |
+| Acceptance criteria terverifikasi | **9 penuh + 11 database-scope / 42** (lihat §4 E-3) |
+| Kode aplikasi | **25 file foundation** + `src/lib/supabase/admin.ts` |
+| Migration | **6** (`supabase/migrations/`) |
+| Test dijalankan | **11 unit** (1 file) + **85 integration** (8 file) |
 | Deployment | **belum dikonfigurasi** |
-| Blocker terbuka | 3 (`KI-01`, `KI-02`, `KI-04`) |
-| Persetujuan yang ditunggu | 1 (izin **implementasi** E-3) |
+| Blocker terbuka | 2 (`KI-01`, `KI-04`) |
+| Persetujuan yang ditunggu | 1 (izin **commit/push** E-3) |
 
-Ringkasan satu kalimat: **foundation aplikasi terpasang dan terverifikasi (G1–G12) serta
-ter-commit; database dan fitur bisnis belum dimulai.**
+Ringkasan satu kalimat: **E-3 (skema, RLS, lima SQL function) terimplementasi dan terverifikasi di
+stack lokal — 85 integration test hijau — tetapi belum di-commit; fitur bisnis (E-4…E-9) belum dimulai.**
 
 ---
 
@@ -89,7 +89,7 @@ ter-commit; database dan fitur bisnis belum dimulai.**
 | E-0 | Planning | `COMPLETED` | 10% |
 | E-1 | Documentation | `COMPLETED` | 10% |
 | E-2 | Foundation | `COMPLETED` | 10% |
-| E-3 | Schema & RLS | `NOT STARTED` | 12% |
+| E-3 | Schema & RLS | `COMPLETED` (lokal, belum di-commit) | 12% |
 | E-4 | Storefront & Seed | `NOT STARTED` | 12% |
 | E-5 | Checkout, Payment & Idempotency | `NOT STARTED` | 18% |
 | E-6 | Admin CMS | `NOT STARTED` | 12% |
@@ -179,14 +179,16 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 
 | File | sha256 (prefix) |
 | --- | --- |
-| `README.md` | `40955e54a41c` |
-| `AGENTS.md` | `54b2ac22d271` |
-| `docs/api-contract.md` | `1d764ef14d09` |
+| `README.md` | `dcdd6c030261` |
+| `AGENTS.md` | `738e98ada2ae` |
+| `docs/api-contract.md` | `9a1f2e444e2a` |
 | `docs/architecture.md` | `f72aa579bf77` |
-| `docs/database-design.md` | `7179b759c5d7` |
+| `docs/database-design.md` | `67f126c88185` |
 | `docs/design-solution.md` | `44cb8a42af37` |
-| `docs/mvp-scope.md` | `41fdee65c2c3` |
-| `docs/technical-decisions.md` | `918bdfca7b08` |
+| `docs/mvp-scope.md` | `486562ca4560` |
+| `docs/technical-decisions.md` | `d526ccf29b5c` |
+
+(Diperbarui 2026-11-27 setelah rekonsiliasi E-3; nilai lama tercatat pada riwayat Git.)
 
 ### E-2 — Foundation — `COMPLETED`
 
@@ -245,29 +247,51 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 - **Completion date:** 2026-11-26
 - **References:** commit `7ed8371`, `5d5895f`
 
-### E-3 — Schema & RLS — `NOT STARTED`
+### E-3 — Schema & RLS — `COMPLETED`
 
 - **Objective:** Menyediakan skema database, constraint, index, RLS, dan lima SQL function
   yang menjadi dasar seluruh alur transaksi dan idempotency.
 - **Tasks:**
   - [x] Desain, audit, dan rekonsiliasi dokumentasi (D-1…D-11) — 2026-11-26
-  - [ ] Migration 1: fungsi helper (`is_admin`, guard terminal, validator I2/I5, `enforce_payment_amount`, `set_updated_at`) + hardening `SECURITY DEFINER`
-  - [ ] Migration 2: `destinations`, `packages` + constraint + index + trigger `BEFORE UPDATE`
-  - [ ] Migration 3: `orders`, `payments`, `idempotency_keys` + constraint + index + trigger I1/I2/I6
-  - [ ] Migration 4: `notification_outbox`, `mock_gateway_transactions` + index parsial + trigger I5
-  - [ ] Migration 5: 5 RPC (`create_order_idempotent`, `settle_payment`, `claim_outbox`, `finish_outbox`, `record_mock_settlement`)
-  - [ ] Migration 6: `ENABLE RLS` + **7 policy** + grant/revoke tabel + revoke CREATE schema
-  - [ ] Seed: 5 destinasi + 15 paket (idempoten), tanpa baris `auth.*`
-  - [ ] `src/lib/supabase/admin.ts` (`server-only`) + konfigurasi integration test + helper `ensureAdminUser` (Admin API)
-  - [ ] Integration test: constraint, transaksi, idempotency (10 request paralel), RLS + privilege matrix, terminal immutability, snapshot paket, B-01 state machine, outbox claim/fencing
-  - [ ] Verifikasi NV-01…NV-05 (NV-03a lokal; `db push` remote **dilarang** tanpa izin terpisah)
-  - [ ] `npx supabase db reset` dua kali: 6 migration, `destinations=5`, `packages=15`
-- **Status:** `NOT STARTED`
-- **Verification result:** Belum ada implementasi. Bukti yang diperlukan: dua `db reset` bersih, test constraint/idempotency/RLS hijau, NV-01…NV-05 lulus.
-- **Blockers / risks:** `KI-02` Supabase CLI belum terpasang (Docker tersedia) · kompleksitas trigger deferred (I2/I5) · estimasi melebihi slot tracker.
-- **Completion date:** —
-- **Estimasi:** implementasi + verifikasi **380 menit (6 j 20 m)**; rekonsiliasi dokumentasi 60 menit (selesai 2026-11-26). Total 440 menit; slot tracker 3 j 30 m → +3 j 50 m.
-- **References:** `docs/database-design.md` §2–§6 (5 RPC, 7 policy) · `docs/technical-decisions.md` ADR-4, ADR-6, ADR-7, ADR-9, ADR-10 · `docs/api-contract.md` §4.3–§4.6 · `AGENTS.md` §Forbidden patterns · RF-1…RF-8, CF-1
+  - [x] Migration 1: fungsi helper (`is_admin`, guard terminal, validator I2/I5, `enforce_payment_amount`, `set_updated_at`) + hardening `SECURITY DEFINER`
+  - [x] Migration 2: `destinations`, `packages` + constraint + index + trigger `BEFORE UPDATE`
+  - [x] Migration 3: `orders`, `payments`, `idempotency_keys` + constraint + index + trigger I1/I2/I6
+  - [x] Migration 4: `notification_outbox`, `mock_gateway_transactions` + index parsial + trigger I5
+  - [x] Migration 5: 5 RPC (`create_order_idempotent`, `settle_payment`, `claim_outbox`, `finish_outbox`, `record_mock_settlement`) + **sweep ceiling** di `claim_outbox`
+  - [x] Migration 6: `ENABLE RLS` + **7 policy** + grant/revoke tabel + **5 REVOKE eksplisit RPC** + revoke CREATE schema
+  - [x] Seed: 5 destinasi + 15 paket (idempoten), tanpa baris `auth.*`
+  - [x] `src/lib/supabase/admin.ts` (`server-only`) + `vitest.config.integration.ts` + fixture `ensureAdminUser`/`ensureMemberUser` (Admin API)
+  - [x] Integration test: constraint, transaksi, idempotency (10 request paralel), RLS + privilege matrix, terminal immutability, snapshot paket, state machine settlement, outbox claim/fencing + race sweep
+  - [x] Verifikasi NV-01…NV-05 (NV-03a lokal; `db push` remote **tidak dijalankan**)
+  - [x] `npx supabase db reset` dua kali: 6 migration, `destinations=5`, `packages=15`
+- **Status:** `VERIFIED` (lokal). Belum di-commit.
+- **Verification result:** `db reset` ×2 bersih (6 migration, 5 destinasi, 15 paket, idempoten) ·
+  **NV-01/NV-02 lulus** · **NV-03a lulus**: matriks privilege efektif sesuai desain (5 RPC hanya
+  `service_role`, `is_admin()` hanya `authenticated` dan tetap `prosecdef = false`, 7 trigger function
+  tidak dapat dieksekusi siapa pun, 0 grantee `PUBLIC`, matriks tabel 7/7 sesuai, RLS aktif 7/7, 7
+  policy persis) · **NV-04 lulus**: 0 secret pada `supabase/**`, `package.json`, `.gitignore`;
+  satu-satunya kunci adalah kunci demo Supabase lokal di `supabase/.temp/` (gitignored) ·
+  **NV-05 lulus**: 21 deviasi dokumen (D-01…D-21) ditutup atau dicatat · `npm run lint` 0 error/0
+  warning · `npm run typecheck` 0 error · `npm run test` 11/11 · `npm run test:int` **85/85** (8 file) ·
+  AC: **9 penuh + 11 database-scope**.
+- **Temuan yang diklasifikasikan:**
+  - D-14 (**non-blocker, laten**): `pg_default_acl` untuk fungsi buatan `postgres` di schema `public`
+    hanya memberi `EXECUTE` ke `postgres`, sehingga kebocoran grant ke `anon`/`authenticated` **tidak
+    aktif** di konfigurasi lokal. Tetap diterapkan 5 `REVOKE` eksplisit sebagai hardening agar hasil
+    akhir tidak bergantung `api.auto_expose_new_tables` (default cloud = `true`) dan agar objek yang
+    dibuat lewat Studio (role `supabase_admin`, yang default-nya mengekspos) tidak mewarisi grant.
+  - D-17 (**blocker pada guarantee, diperbaiki**): crash pada klaim ke-5 meninggalkan baris
+    `processing` permanen. Disetujui opsi C: sweep di awal `claim_outbox`; 3 kasus race
+    `finish_outbox` vs sweep diuji (10 iterasi), invarian terbukti dan tidak ada `sent` → `failed`.
+  - D-21 (**non-blocker**): `locked_at` diuji sebagai opaque string; token ter-truncate ke milidetik
+    terbukti menghasilkan `stale`.
+- **Blockers / risks:** `KI-01` (aset) dan `KI-04` (kanal n8n) tetap terbuka. `KI-02` dan `KI-19`
+  ditutup. Risiko jadwal `KI-10` meningkat (lihat estimasi).
+- **Completion date:** 2026-11-27
+- **Estimasi:** rencana 505 menit; **aktual ± 330 menit** implementasi + verifikasi (di bawah rencana
+  karena sweep dan M6 hanya +11 baris). Rekonsiliasi dokumentasi 60 menit (2026-11-26).
+- **References:** `docs/database-design.md` §2–§6 · `docs/technical-decisions.md` ADR-4, ADR-6, ADR-7,
+  ADR-9, ADR-10 · `docs/api-contract.md` §4.3–§4.6 · `AGENTS.md` §Forbidden patterns · DL-22…DL-25
 
 ### E-4 — Storefront & Seed — `NOT STARTED`
 
@@ -410,6 +434,10 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-19 | 2026-11-26 | `session.ts` tanpa `server-only`; batas rahasia ada di `env.ts` | Implemented | `src/lib/env.ts:1`, `src/modules/auth/session.ts:9` |
 | DL-20 | 2026-11-26 | `next-env.d.ts` di-ignore agar working tree tepat 25 file | Implemented | `.gitignore:9` |
 | DL-21 | 2026-11-26 | `service_role` tanpa DML pada 5 tabel transaksi; 5 RPC `SECURITY DEFINER` (owner `postgres`, `search_path=''`) satu-satunya penulis | Approved (desain) | DB §4, §5 · ADR-7 |
+| DL-22 | 2026-11-27 | Lima `REVOKE ALL ON FUNCTION … FROM public, anon, authenticated, service_role` ditambahkan di migration 0006 sebelum `GRANT EXECUTE … TO service_role` (hardening D-14, hasil akhir tidak bergantung `api.auto_expose_new_tables`) | Implemented + Verified | `supabase/migrations/20261126090006_rls.sql` · `tests/integration/admin/privileges.test.ts` |
+| DL-23 | 2026-11-27 | `claim_outbox` menyapu baris `processing` dengan `attempts >= 5` dan lease kedaluwarsa menjadi `failed` (`lease_expired_after_max_attempts`) sebelum klaim; tanpa field tambahan di respons | Implemented + Verified | `supabase/migrations/20261126090005_functions.sql` · ADR-9 · `tests/integration/outbox.test.ts` |
+| DL-24 | 2026-11-27 | `locked_at` diperlakukan sebagai opaque fencing token string; dilarang dikonversi ke `Date` | Implemented + Verified | DB §5.3–§5.4 · `tests/integration/outbox.test.ts`, `support/assert.ts` |
+| DL-25 | 2026-11-27 | `.env.test` dimuat dengan parser eksplisit + penolakan konflik (bukan `process.loadEnvFile`, yang tidak menimpa env yang sudah ada) dan guard loopback wajib | Implemented + Verified | `tests/integration/support/env.ts`, `global-setup.ts` · `meta.test.ts` |
 | DL-22 | 2026-11-26 | `settle_payment` hanya `succeeded`/`failed`; `record_mock_settlement` menerima 3 outcome (`pending` boleh naik ke terminal, terminal immutable) | Approved (desain) | DB §5.2, §5.5 · API §4.5 |
 | DL-23 | 2026-11-26 | `orders.package_data_snapshot` (turunan deterministik), kardinalitas order→payment **at most one**, pencarian admin **exact match** | Approved (desain) | DB §1, §2.2, §2.3 · API §5.4 |
 
@@ -420,7 +448,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | ID | Isu | Severity | Jenis | Blokir fase | Next step |
 | --- | --- | --- | --- | --- | --- |
 | KI-01 | Aset destinasi berstatus `REVIEW`, belum disetujui visual | Medium | Terbuka | E-4 | Review manusia atas 5 primary image |
-| KI-02 | Supabase CLI belum terpasang (Docker 29.9.2 tersedia) | Medium | Terbuka | E-3 | Izin untuk `npx supabase start` |
+| KI-02 | Supabase CLI belum terpasang (Docker 29.9.2 tersedia) | Medium | **Resolved** (2026-11-27) | — | CLI 3.4.0 dijalankan via `npx`; belum dipin sebagai devDependency (keputusan terpisah) |
 | KI-03 | Dependency di-install | Medium | **Resolved** (2026-11-26) | — | 397 paket terpasang, lockfile v3, commit `7ed8371` |
 | KI-04 | Kanal pengiriman n8n belum dipilih (asumsi A4) | Low | Terbuka | E-7 | Putuskan SMTP/chat sink |
 | KI-05 | Order `pending` tanpa auto-expiry | Low | Diterima | — | Terdokumentasi di README §Limitations |
@@ -429,9 +457,11 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-08 | Tanpa analytics / error monitoring | Low | Diterima | — | Aturan larangan di `AGENTS.md` |
 | KI-09 | Git belum diinisialisasi | Low | **Resolved** (2026-11-26) | — | Repo terinisialisasi; 2 commit, `origin/main` sinkron |
 | KI-10 | Sisa waktu ±3 hari untuk 8 fase implementasi | High | Risiko | E-8, E-9 | Cut-line + buffer submit |
-| KI-19 | `src/lib/supabase/admin.ts` belum dibuat (deferred/open) | Low | Terbuka | — | Tentukan kebutuhan & fasenya pada analisis E-3; belum ada komitmen fase |
+| KI-19 | `src/lib/supabase/admin.ts` belum dibuat (deferred/open) | Low | **Resolved** (2026-11-27) | — | Dibuat di E-3: `server-only`, tanpa `next/server`, timeout `AbortSignal` inline |
 | KI-20 | `/admin/login` belum ada → halaman tujuan redirect masih 404 | Low | Terbuka | — | Ditutup E-6 |
 | KI-21 | `eslint@9.39.5` memunculkan peringatan EOL saat install | Low | **Diterima (warning)** | — | Pantau; naikkan hanya bila seluruh plugin mendukung |
+| KI-22 | Baris outbox `failed` + `attempts = 5` bersifat terminal untuk dispatch; pemulihan hanya lewat runbook operator (bukan jalur aplikasi) | Low | **Diterima** (2026-11-27) | E-7 | Didokumentasikan di ADR-9 §Recovery dan DB §5.3 |
+| KI-23 | `claim_outbox` mengembalikan `locked_at` sebagai string ISO; konversi ke `Date` memutus fencing | Medium | **Dimigasi** (2026-11-27) | E-7 | Dijaga assert `assertOpaqueFencingToken` + TP-2/TP-4 di `tests/integration/outbox.test.ts` |
 
 Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum ditemukan.
 

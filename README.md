@@ -8,8 +8,8 @@ minimal admin CMS, built as a Next.js **modular monolith** on Supabase.
 | Layer | Status |
 | --- | --- |
 | Product & technical design (this documentation set) | **Approved** — 26 Nov 2026 |
-| Application code, migrations, tests | **Not implemented** (`Implemented: none`) |
-| Automated test suite | **Not implemented** |
+| Application code, migrations, tests | **Partial** — E-3 schema, RLS, SQL functions, and the integration suite exist; feature routes/pages do not |
+| Automated test suite | **Partial** — 11 unit tests + 85 integration tests; Playwright pending (E-8) |
 | Deployment | **Not configured** |
 
 Nothing in this repository has been executed yet. Every document describes the approved
@@ -98,7 +98,7 @@ Four responsibilities, one deployable unit:
 
 1. **Presentation** — `app/(store)`, `app/admin`, `app/mock-gateway`, `components/*`.
 2. **Application modules** — `modules/catalog`, `orders`, `payments`, `automation`, `auth`.
-3. **Data** — `lib/supabase/{browser,server,admin}`, SQL migrations, 4 Postgres functions.
+3. **Data** — `lib/supabase/{browser,server,admin}`, SQL migrations, 5 Postgres functions.
 4. **Integrations** — payment adapter (mock), country-data client, n8n client.
 
 Transactional writes (`create_order_idempotent`, `settle_payment`, `claim_outbox`,

@@ -172,7 +172,7 @@ Any of these requires a new proposal — not a "while I am here" addition.
 | AC-T8 | Ten concurrent checkouts with one key produce exactly one order and one payment |
 | AC-T9 | The same key with a different payload returns `409 IDEMPOTENCY_CONFLICT` and creates nothing |
 | AC-T10 | **Within an active lease**, two concurrent dispatches (after + resend, or resend + resend) produce exactly one claim and exactly one HTTP call to n8n; the loser receives `outcome = none` and sends nothing |
-| AC-T11 | **At-least-once**: if the process dies after the HTTP call but before `finish_outbox`, the row stays `processing`; after the 120 s lease it can be reclaimed, so a **repeat delivery is possible**. This is accepted and documented; exactly-once is never claimed |
+| AC-T11 | **At-least-once**: if the process dies after the HTTP call but before `finish_outbox`, the row stays `processing`; after the 120 s lease it is reclaimable **while `attempts < 5`**, so a **repeat delivery is possible**. When the 5th claim is lost, the next `claim_outbox` call sweeps the row to terminal `failed` (`last_error = 'lease_expired_after_max_attempts'`); recovery from that state is a documented operator action, not an application path. Exactly-once is never claimed |
 | AC-T12 | Resend while the row is `processing` inside its lease → `409 NOTIFICATION_IN_FLIGHT`, no delivery |
 | AC-T13 | `finish_outbox` with a stale `locked_at` → `outcome = stale`; `status`, `sent_at`, and `last_error` are unchanged |
 | AC-T14 | n8n HTTP timeout is 10 s and the lease is 120 s; one dispatch including the in-claim retry cannot exceed 20 s |
@@ -194,7 +194,7 @@ Any of these requires a new proposal — not a "while I am here" addition.
 | --- | --- | --- |
 | Product concept and travel-connectivity relevance | README, storefront flows | Screenshots of home → destination → checkout |
 | System structure and module separation | `docs/architecture.md`, module folders | Folder tree + `architecture.md` diagrams |
-| Architecture implementation | Modular monolith, 4 SQL functions | Code reading + integration tests |
+| Architecture implementation | Modular monolith, 5 SQL functions | Code reading + integration tests |
 | External API integration | `countriesnow.space` enrich | Screenshot or test output of a successful enrich and a `503` fallback |
 | Payment gateway (mock allowed) | Adapter + simulated PSP, server-side verification | Checkout-to-paid walkthrough + AC-P1..P7 results |
 | Idempotency | `unique(scope,key)`, payload hash, sealed replay, 24 h window | AC-T6..T9, parallel test output |

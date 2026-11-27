@@ -1,6 +1,8 @@
 # Database Design
 
-Status: `Approved`. Migrations: **not created yet**.
+Status: `Approved`. Migrations: **implemented** in `supabase/migrations/` (E-3) and applied by
+`npx supabase db reset`. Function behaviour below is asserted by `tests/integration/**`; where the
+implementation deliberately differs from the original design note, the note says so.
 
 This document is the authority for tables, constraints, indexes, RLS policies, and SQL
 function signatures. Rationale for the approach is in
@@ -100,9 +102,9 @@ for the simulation page to change an order.
 | `region` | text | not null — admin-authored (`Asia`, `Europe`, …), not from the API |
 | `currency_code` | char(3) | not null |
 | `flag_emoji` | text | null — from `unicodeFlag`, no external CDN |
-| `summary` | text | not null, `CHECK (char_length(summary) <= 160)` |
+| `summary` | text | not null, `CHECK (char_length(summary) BETWEEN 1 AND 160)` |
 | `description` | text | null |
-| `hero_image_url` | text | not null |
+| `hero_image_url` | text | not null, `CHECK (hero_image_url ~ '^https://')` — also blocks external CDNs at the schema level |
 | `hero_image_attribution` | text | not null — required for CC BY / CC BY-SA |
 | `is_active` | boolean | not null, default `true` |
 | `sort_order` | smallint | not null, default `0` |
@@ -151,6 +153,11 @@ CHECK (validity_days BETWEEN 1 AND 90)
 `price_idr >= 1` (not `>= 0`) so a free package cannot create a payment whose
 `amount_idr` is 0, which `payments.amount_idr > 0` would reject.
 
+The migration also enforces format constraints that this table omits for brevity:
+`destinations_slug_format_chk`, `destinations_country_upper_chk`, `destinations_currency_chk`
+(`^[A-Z]{3}$`), `destinations_name_chk`, `packages_slug_format_chk`, `packages_name_chk`,
+and the `orders`/`payments` format checks listed in §2.3–§2.4.
+
 ### 2.3 `orders`
 
 | Column | Type | Constraints |
@@ -167,8 +174,8 @@ CHECK (validity_days BETWEEN 1 AND 90)
 | `customer_email` | text | not null, stored lowercased |
 | `customer_phone` | text | not null, normalized E.164-ish (`+62…`) |
 | `quantity` | smallint | not null, default 1, `CHECK (quantity BETWEEN 1 AND 5)` |
-| `unit_price_idr` | integer | not null, `CHECK (unit_price_idr >= 0)` |
-| `total_idr` | integer | not null, `CHECK (total_idr = unit_price_idr * quantity)` |
+| `unit_price_idr` | integer | not null, `CHECK (unit_price_idr BETWEEN 1 AND 100000000)` |
+| `total_idr` | integer | not null, `CHECK (total_idr BETWEEN 1 AND 2147483647)`, `CHECK (total_idr = unit_price_idr * quantity)` |
 | `status` | text | not null, default `'pending'`, `CHECK (status IN ('pending','paid','failed'))` |
 | `paid_at` | timestamptz | null |
 | `created_at` / `updated_at` | timestamptz | not null, trigger |
@@ -230,8 +237,15 @@ Table constraints:
 
 ```sql
 UNIQUE (scope, key)                     -- the idempotency guarantee
-CHECK (order_id IS NOT NULL OR response_status IS NULL)  -- no response without an order
+CHECK ((order_id IS NULL) = (response_status IS NULL))   -- no response without an order
+CHECK ((order_id IS NULL) = (response_token_sealed IS NULL))
+CHECK (scope = 'checkout')              -- the only supported scope in the MVP
+UNIQUE (order_id) WHERE order_id IS NOT NULL  -- one key per order
 ```
+
+The pair checks are **biconditional**: a row either has both the response fields and the order
+reference, or neither. Implemented as `idempotency_response_pair_chk`,
+`idempotency_sealed_pair_chk`, `idempotency_scope_chk`, and `idempotency_order_unique_idx`.
 
 Rows are never deleted. Replay is refused after 24 h (`IDEMPOTENCY_EXPIRED`), which is
 enforced in the function, not by a cleanup job.
@@ -251,6 +265,11 @@ enforced in the function, not by a cleanup job.
 | `created_at` | timestamptz | not null, default `now()` |
 
 No `event_type` (one event per order), no `next_attempt_at` (no scheduler).
+
+Additional CHECKs present in the migration: `outbox_processing_lock_chk`
+(`(status = 'processing') = (locked_at IS NOT NULL)`), `outbox_sent_at_chk`,
+`outbox_failed_error_chk` (`status <> 'failed' OR last_error IS NOT NULL`), and
+`outbox_attempts_chk` (`attempts BETWEEN 0 AND 5`).
 
 Payload CHECK — the payload must carry every key of the notification contract (extra keys
 are allowed, and adding one later needs no migration):
@@ -318,14 +337,17 @@ Notes that keep the triggers consistent:
 
 | Index | Definition | Query it serves |
 | --- | --- | --- |
-| `destinations_active_sort` | `(is_active, sort_order, name)` | storefront listing |
-| `packages_dest_active_price` | `(destination_id, is_active, price_idr)` | packages per destination, price sort |
-| `orders_created_keyset` | `(created_at DESC, id DESC)` | admin default "newest first" |
-| `orders_status_created` | `(status, created_at DESC, id DESC)` | admin status filter + range |
-| `orders_email_lower` | `(lower(customer_email))` | admin search by email |
-| `payments_created_keyset` | `(created_at DESC, id DESC)` | admin payments list |
-| `outbox_dispatchable` | `(created_at) WHERE status IN ('pending','failed','processing')` | claim scan |
-| `idempotency_touched` | `(touched_at DESC)` | housekeeping review |
+| `destinations_active_sort_idx` | `(is_active, sort_order, name)` | storefront listing |
+| `packages_dest_active_price_idx` | `(destination_id, is_active, price_idr)` | packages per destination, price sort |
+| `orders_created_keyset_idx` | `(created_at DESC, id DESC)` | admin default "newest first" |
+| `orders_status_created_idx` | `(status, created_at DESC, id DESC)` | admin status filter + range |
+| `orders_email_lower_idx` | `(lower(customer_email))` | admin search by email |
+| `payments_created_keyset_idx` | `(created_at DESC, id DESC)` | admin payments list |
+| `outbox_dispatchable_idx` | `(created_at) WHERE status IN ('pending','failed','processing')` | claim scan |
+| `idempotency_touched_idx` | `(touched_at DESC)` | housekeeping review |
+| `idempotency_order_unique_idx` | `(order_id) WHERE order_id IS NOT NULL` | one idempotency row per order |
+
+(Migration index names carry the `_idx` suffix.)
 
 Uniqueness already indexes: `destinations.slug`, `destinations.country_code`,
 `packages(destination_id, slug)`, `orders.order_number`, `orders.access_token_hash`,
@@ -414,8 +436,15 @@ grant select on public.orders, public.payments, public.notification_outbox to au
 
 - `set search_path = ''` and fully schema-qualified object names;
 - `alter function … owner to postgres`;
-- `revoke all on function … from public` (PostgreSQL grants EXECUTE to PUBLIC by default);
+- `revoke all on function … from public, anon, authenticated, service_role` (PostgreSQL grants
+  EXECUTE to PUBLIC by default; when default privileges are auto-exposed, Supabase additionally
+  grants it to `anon`/`authenticated`/`service_role` at creation time. Revoking all four makes the
+  final state identical in both configurations — see ADR-7);
 - `revoke create on schema public from public, anon, authenticated, service_role`.
+
+The explicit revoke matters even where the local configuration does not auto-expose privileges
+(`api.auto_expose_new_tables = false`): `supabase_admin` does hold auto-exposed defaults, so any
+object created through Studio would otherwise start life executable by `anon`/`authenticated`.
 
 **RLS does not protect service role.** `service_role` has `BYPASSRLS`, so policies are not
 evaluated for it; its safety comes from the missing write grants plus the triggers and
@@ -461,23 +490,34 @@ create_order_idempotent(
 Steps, in one transaction:
 
 1. `INSERT INTO idempotency_keys (scope, key, request_hash) VALUES ('checkout', p_key, p_request_hash)
-   ON CONFLICT (scope, key) DO UPDATE SET touched_at = now() RETURNING *` — this also takes
-   the row lock that serialises concurrent requests.
-2. If the returned row already has `order_id`: compare `request_hash`.
-   `created_at > now() - interval '24 hours'` → `replay` (return stored
-   `response_body` + `response_token_sealed` as `sealed_token`). Older → `expired`.
-   Different hash → `conflict`. No writes in any of these branches.
+   ON CONFLICT (scope, key) DO NOTHING RETURNING id` — the unique index coordinates racers: a blocked
+   `INSERT` waits for the winner to commit, then returns no row and no lock is taken on a row that
+   does not exist yet. (`DO UPDATE SET touched_at = now()` was rejected: it would write on every
+   replay, and replay is documented as write-free.)
+2. If the insert returned no row, read the existing row. **Expiry is evaluated before the hash**:
+   `created_at <= now() - interval '24 hours'` → `expired`; then a different `request_hash` →
+   `conflict`; otherwise `replay`, returning the stored `response_body` plus
+   `response_token_sealed` as `sealed_token`. No writes in any of these branches, so `touched_at`
+   keeps the row-creation time.
 3. Otherwise read the package:
-   `SELECT price_idr FROM packages WHERE id = (p_order->>'package_id')::uuid AND is_active`.
-   Missing/inactive → `package_inactive`, nothing written.
-4. `unit_price = price_idr`, `total = unit_price * quantity`.
+   `SELECT price_idr FROM packages WHERE id = (p_order->>'package_id')::uuid AND is_active`, joined to
+   `destinations` and requiring `destinations.is_active`. Missing/inactive → **`RAISE` `22000` with
+   message `PACKAGE_INACTIVE`**, nothing written. The raise (rather than a returned outcome) aborts
+   the transaction, which also rolls back the key insert so the key is not burned; E-5 maps the
+   message to `409 PACKAGE_INACTIVE`.
+4. `unit_price = price_idr`, `total = unit_price * quantity` (overflow beyond int4 → `22003`).
 5. Insert `orders` (status `pending`, snapshots from destination/package, provided
    `order_number`, `access_token_hash`) and `payments` (status `pending`,
    `provider_reference`, `amount_idr = total`).
 6. Update the idempotency row: `order_id`, `response_status = 201`,
    `response_body = {order_number, payment_ref, total_idr}`,
    `response_token_sealed`, `touched_at = now()`.
-7. Return `created` with totals.
+7. Return `created` with `{order_id, order_number, payment_ref, total_idr}`.
+
+Return shapes as implemented: `created` → `{outcome, order_id, order_number, payment_ref,
+ total_idr}`; `replay` → `{outcome, order_number, payment_ref, total_idr, sealed_token}`;
+`conflict` / `expired` → `{outcome}`. There is no `unit_price_idr` in the response (the price is
+implied by `total_idr / quantity` and is not needed by the checkout contract).
 
 Guarantees: prices come from the database, not from the request; one key yields one order;
 concurrent duplicates either replay or block, never duplicate.
@@ -504,12 +544,20 @@ forces that branch.
 2. Row missing → `not_found`.
 3. `status <> 'pending'` → `unchanged` (idempotent, no writes).
 4. `p_outcome = 'succeeded'` → payment `succeeded` + `paid_at`; order `pending → paid` +
-   `paid_at`; then insert the outbox row
-   (`ON CONFLICT (order_id) DO NOTHING`) with the minimized payload.
-5. `p_outcome = 'failed'` → payment `failed` (+`failure_code`); order `pending → failed`.
-   No outbox row.
+   `paid_at`; then insert the outbox row with the minimized payload.
+5. `p_outcome = 'failed'` → payment `failed` (+`failure_code = 'GATEWAY_DECLINED'`); order
+   `pending → failed`. No outbox row.
 
-Every `UPDATE` carries `AND status = 'pending'`. `failed` and `paid` are terminal.
+Serialisation: the `SELECT … FOR UPDATE` on the payment row is what makes the transitions safe, so
+the subsequent `UPDATE`s do **not** repeat `AND status = 'pending'` in their WHERE clause (the row is
+already locked and its status was checked). The outbox `INSERT` is unconditional rather than
+`ON CONFLICT (order_id) DO NOTHING`: the lock plus the `pending` gate means at most one call reaches
+it, and `UNIQUE (order_id)` would surface a genuine bug instead of hiding it.
+
+Every `UPDATE` carries `AND status = 'pending'` is therefore **not** an accurate description of the
+implementation; the guarantee comes from the row lock.
+
+`failed` and `paid` are terminal (I6).
 
 All five RPCs assume **READ COMMITTED** (the PostgREST/Supabase default). No
 `SET TRANSACTION`, no advisory locks, no retry framework. `claim_outbox(p_order_id)`
@@ -522,7 +570,20 @@ claim_outbox(p_order_id uuid default null) returns jsonb
 -- → {outcome:'claimed', id, order_id, attempts, locked_at} | {outcome:'none'}
 ```
 
+Two statements, one transaction. The first **reaps dead ceilings**, the second claims:
+
 ```sql
+-- 1) sweep: a crash on the 5th claim would otherwise strand the row in 'processing' forever,
+--    because the claim predicate requires attempts < 5 and no dispatcher is left to finish it.
+UPDATE notification_outbox
+   SET status = 'failed',
+       last_error = coalesce(nullif(last_error, ''), 'lease_expired_after_max_attempts'),
+       locked_at = NULL
+ WHERE status = 'processing'
+   AND attempts >= 5
+   AND locked_at < now() - interval '120 seconds';
+
+-- 2) claim
 UPDATE notification_outbox
    SET status = 'processing', locked_at = now(), attempts = attempts + 1
  WHERE id = (
@@ -539,8 +600,32 @@ UPDATE notification_outbox
 RETURNING id, order_id, attempts, locked_at;
 ```
 
-`locked_at` is returned because it is the caller's fencing token. `0 rows` → `none`; the
-caller must not send anything.
+The sweep is mandatory ordering, not style: PL/pgSQL overwrites `FOUND` on every `UPDATE`, and the
+following `IF NOT FOUND` produces the `none` outcome.
+
+Safety: the sweep set (`attempts >= 5`) and the claim set (`attempts < 5`) are disjoint, so they
+never compete. Under READ COMMITTED a concurrently committed `finish_outbox` is re-checked
+(EvalPlanQual) and skipped, so a `sent` row is never swept to `failed`; conversely, if the sweep wins
+first, the fenced `finish_outbox` reports `stale` and cannot resurrect the row.
+
+`locked_at` is returned because it is the caller's fencing token. It is an **opaque string**: pass it
+back to `finish_outbox` verbatim. Converting it to a `Date` truncates to milliseconds and the
+equality check will fail (`stale`) even for the legitimate holder. `0 rows` → `none`; the caller must
+not send anything.
+
+**Ceiling boundary.** `attempts` is incremented by the claim, so a crashed 5th claim is a true
+dead-end without the sweep. After the sweep the row is `failed` with `attempts = 5`, which is terminal
+for dispatch (`claim_outbox` excludes it forever). Recovery from that state is a documented operator
+action by the database owner, not an application path:
+
+```sql
+-- OPERATOR RUNBOOK (role postgres, via psql; not exposed as an RPC or endpoint)
+UPDATE notification_outbox
+   SET status='pending', attempts=0, locked_at=NULL, sent_at=NULL, last_error=NULL
+ WHERE id = $1 AND status='failed' AND attempts >= 5;
+```
+
+`notificationId` (= `id`) is unchanged by recovery, so receiver-side deduplication still holds.
 
 ### 5.4 `finish_outbox`
 
@@ -554,12 +639,16 @@ returns jsonb
 UPDATE notification_outbox
    SET status    = CASE WHEN p_ok THEN 'sent' ELSE 'failed' END,
        sent_at   = CASE WHEN p_ok THEN now() ELSE NULL END,
-       last_error= p_error,
+       last_error= CASE WHEN p_ok THEN NULL
+                        ELSE coalesce(nullif(p_error, ''), 'unknown_error') END,
        locked_at = NULL
  WHERE id = p_id
    AND status = 'processing'
    AND locked_at = p_locked_at;      -- fencing: only the claim holder may finish
 ```
+
+`last_error` is normalised (empty/`NULL` → `unknown_error`) so the
+`outbox_failed_error_chk` guarantee always holds for a `failed` row.
 
 `0 rows` → `stale`: a newer claim owns the row; the caller changes nothing and logs a
 warning. This is what prevents a slow dispatcher from overwriting a newer attempt.

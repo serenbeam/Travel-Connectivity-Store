@@ -1,6 +1,8 @@
 # Technical Decisions
 
-Status: `Approved`. Implementation: none yet.
+Status: `Approved`. Implementation: **E-3 schema, RLS, and the five SQL functions exist** and are
+exercised by `tests/integration/**` against the local stack. Route-level behaviour (E-5…E-8) is not
+implemented yet.
 
 One record per decision: context, decision, consequence, rejected alternative. Facts here
 are the reason the code looks the way it will; do not re-litigate them in code comments.
@@ -64,16 +66,17 @@ validators (unnecessary surface).
 transaction across several statements. Checkout must insert an order, a payment, and
 idempotency metadata atomically.
 
-**Decision.** Four SQL functions own the transactional operations:
-`create_order_idempotent`, `settle_payment`, `claim_outbox`, `finish_outbox`. Node calls
-them via `supabase.rpc()`. Authorization checks and response composition stay in Node.
+**Decision.** **Five** SQL functions own the transactional operations:
+`create_order_idempotent`, `settle_payment`, `claim_outbox`, `finish_outbox`, and
+`record_mock_settlement`. Node calls them via `supabase.rpc()`. Authorization checks and response
+composition stay in Node.
 
 **Consequences.** Atomicity and locking are database guarantees, not application hopes.
 Integration tests exercise the real constraints rather than a mocked repository.
 Price is read inside the function, which removes the time-of-check/time-of-use gap.
 
 **Rejected.** Multiple JS calls with manual compensation (not atomic); adding an ORM or a
-raw `pg` transaction wrapper (extra dependency for four functions).
+raw `pg` transaction wrapper (extra dependency for five functions).
 
 ---
 
@@ -118,9 +121,11 @@ response includes a capability token, so storing it naively would put a credenti
   never a capability URL. Node composes `capabilityUrl` from the plaintext token it holds.
 - Replay window 24 h; beyond that `IDEMPOTENCY_EXPIRED` (409) and **no order is created**.
 
-**Consequences.** Concurrency is settled by the unique constraint plus row lock from
-`ON CONFLICT ... DO UPDATE ... RETURNING`. Ten concurrent requests produce one order.
-Holding the `Idempotency-Key` is equivalent to holding the capability, so the key is
+**Consequences.** Concurrency is settled by the unique constraint: the losing `INSERT … ON CONFLICT
+(scope, key) DO NOTHING` waits for the winner to commit, then takes the replay branch. Ten concurrent
+requests produce one order. (`DO UPDATE … RETURNING`, which an earlier draft described, was rejected
+because it writes on every replay.) Holding the `Idempotency-Key` is equivalent to holding the
+capability, so the key is
 treated as a secret: 32 random bytes, `sessionStorage`, redacted from logs, `no-store`.
 
 **Accepted risks.** Key rotation breaks old replays → `IDEMPOTENCY_REPLAY_UNAVAILABLE`
@@ -198,13 +203,16 @@ must not be sent twice by concurrent triggers, and must not require a queue or s
 
 - `notification_outbox` row committed in the same transaction as `settle_payment`;
   `unique(order_id)` means at most one row per order.
-- `claim_outbox()` is the only way to start work: a single `UPDATE` over a
-  `FOR UPDATE SKIP LOCKED` subquery, eligible only for `pending` / `failed` /
+- `claim_outbox()` is the only way to start work: one transaction that first **sweeps** dead leases
+  (`processing` with `attempts >= 5` and an expired lease) into terminal `failed`, then performs a
+  single `UPDATE` over a `FOR UPDATE SKIP LOCKED` subquery, eligible only for `pending` / `failed` /
   expired-`processing` rows of **paid** orders with `attempts < 5`. It sets
   `status='processing'`, `locked_at=now()`, and **returns `locked_at`**.
 - `finish_outbox(id, locked_at, ok, error)` only mutates the row when
   `status='processing' AND locked_at = $locked_at`. A stale caller gets `outcome='stale'`
-  and changes nothing — this is the lost-update guard.
+  and changes nothing — this is the lost-update guard. `locked_at` is an opaque string and must be
+echoed verbatim; converting it to a `Date` truncates microseconds and turns the caller into a stale
+  one.
 - Lease 120 s, HTTP timeout **10 s**, one retry inside the same claim (no re-claim), so a
   dispatch takes ≤ 20 s and cannot outlive its lease.
 - Dispatchers: `after()` in the verify request, and the admin resend route. Both go through
@@ -216,8 +224,12 @@ send after the lease expires. That is accepted and documented; `notificationId`
 (= `notification_outbox.id`) is included so a receiver can deduplicate. Exactly-once is
 never claimed.
 
-**Recovery.** Lease reclaim for abandoned `processing` rows; admin "Resend" for `failed` and
-for rows stranded in `pending`.
+**Recovery.** Lease reclaim for abandoned `processing` rows while `attempts < 5`; the ceiling sweep
+above for rows abandoned at `attempts = 5`; admin "Resend" for `failed` and for rows stranded in
+`pending`. A row that ends `failed` with `attempts = 5` is **terminal for dispatch** — the only way
+back is an operator action by the database owner (role `postgres`, via psql): set the row to
+`pending`, `attempts = 0`, `locked_at = NULL`, `sent_at = NULL`, `last_error = NULL`. That runbook is
+an operational exception to the single-writer rule, not an application writer path.
 
 **Rejected.** In-memory retry loops (lost on restart); a queue/broker/worker (out of scope,
 new infrastructure); `attempts`-only retry without fencing (allows a slow dispatcher to
