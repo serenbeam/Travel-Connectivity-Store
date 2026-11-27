@@ -12,7 +12,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:int": "vitest run --config vitest.config.integration.ts",
+    "db:reset": "npx supabase db reset"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
