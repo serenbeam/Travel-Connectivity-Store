@@ -62,21 +62,21 @@ Aturan tambahan:
 
 | Field | Nilai |
 | --- | --- |
-| Fase terakhir selesai | **E-2a Git Commit & Push — `COMPLETED`** (2026-11-26) |
-| Fase aktif | **E-4 Storefront & Seed — `VERIFIED`** (belum di-commit; NFR9 contrast & seleksi aset final `DEFERRED`) |
-| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
+| Fase terakhir selesai | **E-4 Storefront & Seed — `CLOSED`** (2026-11-27, 4 commit lokal) |
+| Fase aktif | **E-4 Storefront & Seed — `CLOSED`** · berikutnya E-5 (belum dimulai) |
+| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
-| Fase selesai | **3 / 10 (30%)** + 1 checkpoint tanpa bobot (E-2a) |
+| Fase selesai | **4 / 10 (42%)** + 1 checkpoint tanpa bobot (E-2a) |
 | Acceptance criteria terverifikasi | **10 penuh + 11 database-scope + 21 pending / 42** (AC-E3 diverifikasi di E-4; lihat §4 E-3 dan §4 E-4) |
 | Kode aplikasi | **34 file** di `src/**` (`.ts`/`.tsx`): 14 ter-track sebelum E-4, 20 baru dari E-4; 1 placeholder (`src/app/page.tsx`) dihapus |
 | Migration | **6** (`supabase/migrations/`) |
 | Test dijalankan | **32 unit** (3 file) + **85 integration** (8 file) |
 | Deployment | **belum dikonfigurasi** |
 | Blocker terbuka | **0 untuk E-4** · 1 project-level (`KI-04`, milik E-7) |
-| Persetujuan yang ditunggu | 1 (izin **commit & push** E-4) |
+| Persetujuan yang ditunggu | **push manual oleh user** (4 commit E-4 sudah lokal) |
 
-Ringkasan satu kalimat: **E-3 selesai dan ter-push (`7d18015`); E-4 storefront terimplementasi dan
-terverifikasi lokal tetapi belum di-commit; E-5…E-9 berstatus HOLD.**
+Ringkasan satu kalimat: **E-4 storefront `CLOSED` dengan empat commit lokal (belum di-push);
+E-5…E-9 berstatus HOLD dan belum dimulai.**
 
 ---
 
@@ -90,7 +90,7 @@ terverifikasi lokal tetapi belum di-commit; E-5…E-9 berstatus HOLD.**
 | E-1 | Documentation | `COMPLETED` | 10% |
 | E-2 | Foundation | `COMPLETED` | 10% |
 | E-3 | Schema & RLS | `CLOSED` | 12% |
-| E-4 | Storefront & Seed | `VERIFIED` (belum di-commit) | 12% |
+| E-4 | Storefront & Seed | `CLOSED` | 12% |
 | E-5 | Checkout, Payment & Idempotency | `NOT STARTED` | 18% |
 | E-6 | Admin CMS | `NOT STARTED` | 12% |
 | E-7 | n8n & Outbox | `NOT STARTED` | 8% |
@@ -297,7 +297,7 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 - **References:** `docs/database-design.md` §2–§6 · `docs/technical-decisions.md` ADR-4, ADR-6, ADR-7,
   ADR-9, ADR-10 · `docs/api-contract.md` §4.3–§4.6 · `AGENTS.md` §Forbidden patterns · DL-24…DL-28
 
-### E-4 — Storefront & Seed — `VERIFIED` (belum di-commit)
+### E-4 — Storefront & Seed — `CLOSED`
 
 - **Objective:** Storefront yang dapat dijelajahi end-to-end dengan data seed dan aset final.
   - *Catatan (2026-11-27):* rumusan di atas dipertahankan sebagai objective historis. Untuk MVP,
@@ -311,8 +311,11 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
   - [x] `/destinations/[destinationSlug]/packages/[packageSlug]` detail + CTA (D-01, D-05)
   - [x] Lima foto destinasi dipakai untuk MVP — **approved for MVP use**; seleksi aset final `DEFERRED` post-MVP (KI-01)
   - [x] Data seed dipakai apa adanya dengan URL & atribusi kandidat (tanpa perubahan seed)
-- **Status:** `VERIFIED` — implementasi dan verifikasi lokal selesai; **belum di-commit**.
-  NFR9 contrast dan seleksi aset final berstatus `DEFERRED` (post-MVP).
+- **Status:** `CLOSED` — 2026-11-27. Implementasi, verifikasi, dan commit lokal selesai.
+  **Belum di-push**; push dilakukan manual oleh user.
+- **Git (4 commit lokal):** `96b69b2` feat(e4) storefront + catalog module (24 file) ·
+  `33d99f6` test(e4) catalog derivation & DTO (2 file) · `23f25b4` docs(e4) implementation &
+  verification (4 file) · `docs(e4) close storefront phase` = commit ini (1 file, WORK_TRACKER saja).
 - **Verification result:** lint 0/0 · typecheck 0 · unit 32/32 (11 E-2 + 21 baru) · build tanpa env
   hijau · semua route katalog `ƒ` (dynamic, D-07) · HTTP: `/`, `/destinations`, `?region=Asia` (4),
   `?region=Europe` (1), `?region=Mars` (empty), detail destinasi (3 paket: 89/145/249 k), detail
@@ -340,7 +343,14 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
   `KI-27` (cakupan uji keyboard baru homepage).
 - **Project-level blocker (bukan milik E-4):** `KI-04` — kanal notifikasi n8n belum dipilih, milik
   E-7; tidak menghalangi E-4.
-- **Completion date:** —
+- **Completion date:** 2026-11-27
+- **Handoff ke E-5:** baseline commit = commit penutupan ini. Route tersedia: `/`,
+  `/destinations` (`?region=`), `/destinations/[destinationSlug]`,
+  `/destinations/[destinationSlug]/packages/[packageSlug]`. Kontrak CTA:
+  `/checkout?destination=<destinationSlug>&package=<packageSlug>` (masih 404 — KI-24). E-5 perlu
+  menambahkan `destinationSlug` pada body `POST /api/checkout` (gap kontrak, `docs/api-contract.md`
+  §4.3) dan memakai lookup `(destinationSlug, packageSlug)` yang sama dengan
+  `catalog.queries.getPackageByRoute`. E-3 tetap CLOSED: E-4 tidak mengubah skema/seed/RPC.
 - **References:** `docs/design-solution.md` §3, §6, §8 · `docs/architecture.md` §5.1 ·
   `docs/mvp-scope.md` FR-C1…C4 · DL-27
 
@@ -524,10 +534,11 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | NA-06 | Jalankan E-2 langkah pertama setelah NA-02 | NA-02 | Selesai |
 | NA-07 | Analisis + proposal + implementasi E-3 | NA-02 | Selesai (`af53146`, `f4172e1`, `7d18015`) |
 | NA-08 | Sinkronkan `docs/design-solution.md` §5.2 (font) dan `AGENTS.md` (daftar skrip) dengan realitas E-2 | — | **Menunggu persetujuan terpisah** (belum ada izin mengubah dokumen baseline) |
-| NA-09 | Mulai **E-4 Analysis/Proposal** (bukan izin implementasi) | NA-07 | **Ya (pemilik proyek)** |
+| NA-09 | Analisis + proposal + implementasi + commit lokal E-4 (Tier P1–P4) | NA-07 | Selesai (`96b69b2`, `33d99f6`, `23f25b4` + commit penutupan) |
+| NA-10 | **Push manual** empat commit E-4 ke `origin/main` | NA-09 | **Ya (pemilik proyek)** |
+| NA-11 | Mulai **E-5 Analysis/Proposal** (bukan izin implementasi) | NA-10 | **Ya (pemilik proyek)** |
 
-Urutan yang disarankan: **NA-09** (mulai E-4 Analysis/Proposal) → implementasi E-4 hanya setelah
-proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
+Urutan yang disarankan: **NA-10** (push manual) → **NA-11** (mulai E-5 Analysis/Proposal) → implementasi E-5 hanya setelah proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
 persetujuan terpisah — tanpa izin tersebut, `AGENTS.md` dan `docs/design-solution.md` tidak
 disentuh.
 
@@ -570,6 +581,7 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-27 | E-4…E-8 tetap `HOLD`; 22 AC menunggu fase berikutnya, 11 AC tetap database-scope | `HOLD` |
 | 2026-11-27 | E-4 storefront diimplementasikan (P1–P4): modul catalog, 4 halaman, 9 komponen, 2 file unit test; lint/typecheck/build hijau, HTTP 200 & 404 terverifikasi | `IMPLEMENTED` |
 | 2026-11-27 | E-4 sinkronisasi dokumentasi: status → `VERIFIED`; fallback gambar, NFR8, dan NFR9-keyboard PASS (pengujian pengguna), A″ dicatat, KI-01 → approved-for-MVP, KI-25…KI-27 ditambahkan; NFR9 contrast + seleksi aset final `DEFERRED` | `VERIFIED` |
+| 2026-11-27 | E-4 penutupan: 4 commit lokal (`96b69b2`, `33d99f6`, `23f25b4`, commit penutupan), gate lint/typecheck/unit 32-32/production build semuanya PASS, working tree bersih; **belum di-push** | `CLOSED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:
