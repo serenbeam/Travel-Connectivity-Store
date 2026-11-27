@@ -294,7 +294,7 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 - **Estimasi:** rencana 505 menit; **aktual ± 330 menit** implementasi + verifikasi (di bawah rencana
   karena sweep dan M6 hanya +11 baris). Rekonsiliasi dokumentasi 60 menit (2026-11-26).
 - **References:** `docs/database-design.md` §2–§6 · `docs/technical-decisions.md` ADR-4, ADR-6, ADR-7,
-  ADR-9, ADR-10 · `docs/api-contract.md` §4.3–§4.6 · `AGENTS.md` §Forbidden patterns · DL-22…DL-25
+  ADR-9, ADR-10 · `docs/api-contract.md` §4.3–§4.6 · `AGENTS.md` §Forbidden patterns · DL-24…DL-28
 
 ### E-4 — Storefront & Seed — `NOT STARTED`
 
@@ -437,8 +437,8 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-19 | 2026-11-26 | `session.ts` tanpa `server-only`; batas rahasia ada di `env.ts` | Implemented | `src/lib/env.ts:1`, `src/modules/auth/session.ts:9` |
 | DL-20 | 2026-11-26 | `next-env.d.ts` di-ignore agar working tree tepat 25 file | Implemented | `.gitignore:9` |
 | DL-21 | 2026-11-26 | `service_role` tanpa DML pada 5 tabel transaksi; 5 RPC `SECURITY DEFINER` (owner `postgres`, `search_path=''`) satu-satunya penulis | Approved (desain) | DB §4, §5 · ADR-7 |
-| DL-22 | 2026-11-27 | Lima `REVOKE ALL ON FUNCTION … FROM public, anon, authenticated, service_role` ditambahkan di migration 0006 sebelum `GRANT EXECUTE … TO service_role` (hardening D-14, hasil akhir tidak bergantung `api.auto_expose_new_tables`) | Implemented + Verified | `supabase/migrations/20261126090006_rls.sql` · `tests/integration/admin/privileges.test.ts` |
-| DL-23 | 2026-11-27 | `claim_outbox` menyapu baris `processing` dengan `attempts >= 5` dan lease kedaluwarsa menjadi `failed` (`lease_expired_after_max_attempts`) sebelum klaim; tanpa field tambahan di respons | Implemented + Verified | `supabase/migrations/20261126090005_functions.sql` · ADR-9 · `tests/integration/outbox.test.ts` |
+| DL-27 | 2026-11-27 | Lima `REVOKE ALL ON FUNCTION … FROM public, anon, authenticated, service_role` ditambahkan di migration 0006 sebelum `GRANT EXECUTE … TO service_role` (hardening D-14, hasil akhir tidak bergantung `api.auto_expose_new_tables`) | Implemented + Verified | `supabase/migrations/20261126090006_rls.sql` · `tests/integration/admin/privileges.test.ts` |
+| DL-28 | 2026-11-27 | `claim_outbox` menyapu baris `processing` dengan `attempts >= 5` dan lease kedaluwarsa menjadi `failed` (`lease_expired_after_max_attempts`) sebelum klaim; tanpa field tambahan di respons | Implemented + Verified | `supabase/migrations/20261126090005_functions.sql` · ADR-9 · `tests/integration/outbox.test.ts` |
 | DL-24 | 2026-11-27 | `locked_at` diperlakukan sebagai opaque fencing token string; dilarang dikonversi ke `Date` | Implemented + Verified | DB §5.3–§5.4 · `tests/integration/outbox.test.ts`, `support/assert.ts` |
 | DL-25 | 2026-11-27 | `.env.test` dimuat dengan parser eksplisit + penolakan konflik (bukan `process.loadEnvFile`, yang tidak menimpa env yang sudah ada) dan guard loopback wajib | Implemented + Verified | `tests/integration/support/env.ts`, `global-setup.ts` · `meta.test.ts` |
 | DL-26 | 2026-11-27 | Penutupan Git E-3 dalam tiga commit terpisah (database · test · docs) lalu push fast-forward ke `origin/main`; tanpa amend, squash, atau force | Implemented + Verified | `af53146`, `f4172e1`, `7d18015` · `7c80675..7d18015` |
