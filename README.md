@@ -8,7 +8,7 @@ minimal admin CMS, built as a Next.js **modular monolith** on Supabase.
 | Layer | Status |
 | --- | --- |
 | Product & technical design (this documentation set) | **Approved** — 26 Nov 2026 |
-| Application code, migrations, tests | **Partial** — E-3 schema/RLS/SQL functions and the E-4 storefront exist; checkout, order, and admin routes do not |
+| Application code, migrations, tests | **Partial** — E-3 schema/RLS/SQL functions, the E-4 storefront, and the E-5 checkout/payment/order flow exist; admin routes do not |
 | Automated test suite | **Partial** — 32 unit tests + 85 integration tests; Playwright pending (E-8) |
 | Deployment | **Not configured** |
 
@@ -188,22 +188,18 @@ Details and the case list: [`docs/mvp-scope.md`](docs/mvp-scope.md) and
 6. **Country data enrichment is best-effort.** The external API is optional; if it is
    unavailable, admins enter currency/region manually.
 7. **Single-currency (IDR) and single quantity model.** No FX, no multi-currency, no carts.
-8. **The package-detail CTA links to `/checkout` before E-5 exists.**
-   `/checkout?destination=<destinationSlug>&package=<packageSlug>` returns 404 until the
-   checkout page ships in E-5. No stub page is created on purpose (that route belongs to
-   E-5).
-9. **Storefront copy is English**, while the order snapshot text stored by the database
+8. **Storefront copy is English**, while the order snapshot text stored by the database
    (`orders.package_data_snapshot`) is Indonesian. The two are intentionally different:
    one is UI copy, the other is frozen order data.
-10. **Destination photography is hot-linked from Wikimedia Commons.** The source can answer
+9. **Destination photography is hot-linked from Wikimedia Commons.** The source can answer
     **HTTP 429** intermittently (per-IP rate limiting); this is an external risk that is
     mitigated, not removed. Mitigations: bounded `next/image` variants plus a one-day image
     cache, and a fallback that shows a sand panel with the flag emoji and the destination
     name when the request fails (verified manually with the image request blocked).
-11. **The five destination photos are used as-is for the MVP.** Final asset selection is
+10. **The five destination photos are used as-is for the MVP.** Final asset selection is
     deferred to post-MVP. Each photo's licence credit is stored in
     `destinations.hero_image_attribution` and rendered on the destination page.
-12. **The NFR9 contrast ratio has not been measured.** Colours are defined once in
+11. **The NFR9 contrast ratio has not been measured.** Colours are defined once in
     `src/app/globals.css`; the ≥ 4.5:1 audit is deferred to post-MVP.
 
 ## Documentation map

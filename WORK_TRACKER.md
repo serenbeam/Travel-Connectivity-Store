@@ -63,14 +63,14 @@ Aturan tambahan:
 | Field | Nilai |
 | --- | --- |
 | Fase terakhir selesai | **E-4 Storefront & Seed — `CLOSED`** (2026-11-27, 4 commit lokal) |
-| Fase aktif | **E-4 Storefront & Seed — `CLOSED`** · berikutnya E-5 (belum dimulai) |
+| Fase aktif | **E-5 Checkout, Payment & Idempotency — `VERIFIED`** (belum di-commit) |
 | Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
 | Fase selesai | **4 / 10 (42%)** + 1 checkpoint tanpa bobot (E-2a) |
-| Acceptance criteria terverifikasi | **10 penuh + 11 database-scope + 21 pending / 42** (AC-E3 diverifikasi di E-4; lihat §4 E-3 dan §4 E-4) |
+| Acceptance criteria terverifikasi | **27 penuh + 4 database-scope + 11 pending / 42** (E-5 memverifikasi 18 AC baru; sisa database-scope: T7, T10, T11, T15 — menunggu E-7) |
 | Kode aplikasi | **34 file** di `src/**` (`.ts`/`.tsx`): 14 ter-track sebelum E-4, 20 baru dari E-4; 1 placeholder (`src/app/page.tsx`) dihapus |
 | Migration | **6** (`supabase/migrations/`) |
-| Test dijalankan | **32 unit** (3 file) + **85 integration** (8 file) |
+| Test dijalankan | **59 unit** (6 file) + **85 integration** (8 file) + smoke HTTP 27/27 |
 | Deployment | **belum dikonfigurasi** |
 | Blocker terbuka | **0 untuk E-4** · 1 project-level (`KI-04`, milik E-7) |
 | Persetujuan yang ditunggu | **push manual oleh user** (4 commit E-4 sudah lokal) |
@@ -91,7 +91,7 @@ E-5…E-9 berstatus HOLD dan belum dimulai.**
 | E-2 | Foundation | `COMPLETED` | 10% |
 | E-3 | Schema & RLS | `CLOSED` | 12% |
 | E-4 | Storefront & Seed | `CLOSED` | 12% |
-| E-5 | Checkout, Payment & Idempotency | `NOT STARTED` | 18% |
+| E-5 | Checkout, Payment & Idempotency | `VERIFIED` (belum di-commit) | 18% |
 | E-6 | Admin CMS | `NOT STARTED` | 12% |
 | E-7 | n8n & Outbox | `NOT STARTED` | 8% |
 | E-8 | Testing & Polish | `NOT STARTED` | 5% |
@@ -359,24 +359,33 @@ compare-at price display · breadcrumb (dipasang minimal) · `loading.tsx` skele
 halaman · dua public JSON endpoint · mobile sticky bottom bar · font self-hosted · sort/search
 katalog · RTL/component test.
 
-### E-5 — Checkout, Payment & Idempotency — `NOT STARTED`
+### E-5 — Checkout, Payment & Idempotency — `VERIFIED` (belum di-commit)
 
 - **Objective:** Alur checkout guest sampai status order final dengan pembayaran yang hanya
   berubah melalui verifikasi server dan idempotency yang tahan konkurensi.
 - **Tasks:**
-  - [ ] `POST /api/checkout` (Zod strict, `Idempotency-Key`)
-  - [ ] Token capability 256-bit + hash di `orders` + sealed token pada idempotency
-  - [ ] Halaman `/mock-gateway/[ref]` (simulasi) + endpoint settle
-  - [ ] `POST /api/payments/verify` + `settle_payment`
-  - [ ] `GET /api/orders/[token]` + halaman order status
-  - [ ] Header capability (`no-referrer`, `no-store`, `noindex`) + 0 third-party request
-  - [ ] Unit + integration test (AC-C, AC-P, AC-T1…AC-T9)
-- **Status:** `NOT STARTED`
-- **Verification result:** Belum ada. Bukti yang diperlukan: walkthrough checkout→paid,
-  test 10 paralel = 1 order, replay mengembalikan `capabilityUrl` identik, snapshot
-  `orders`/`payments` tidak berubah saat settle dipanggil, header test lulus.
-- **Blockers / risks:** Risiko tertinggi proyek (idempotency + transisi state). Tidak ada
-  blocker eksternal; bergantung pada E-3.
+  - [x] `POST /api/checkout` (Zod strict, `Idempotency-Key`, `destinationSlug` wajib)
+  - [x] Token capability 256-bit + hash di `orders` + sealed token pada idempotency (AES-256-GCM)
+  - [x] Halaman `/mock-gateway/[ref]` (simulasi) + endpoint settle
+  - [x] `POST /api/payments/verify` + `settle_payment`
+  - [x] `GET /api/orders/[token]` + halaman order status `/orders/[token]`
+  - [x] Header capability (`no-referrer`, `no-store`, `noindex`) + 0 third-party request
+  - [x] Unit test (59 total) + smoke test HTTP 27/27 pada server produksi lokal
+- **Status:** `VERIFIED` — implementasi dan verifikasi lokal selesai; **belum di-commit**.
+- **Verification result:** lint 0/0 · typecheck 0 · unit **59/59** · build produksi hijau
+  (12 route) · **smoke HTTP 27/27 PASS**: 201 created · replay 200 dengan `capabilityUrl`
+  identik · key sama + payload beda → 409 conflict · tanpa header → 400 · `price`/qty 6/email
+  invalid/pair tidak dikenal → 422/409 · **10 paralel = 1×201 + 9×200, satu order** · mock settle
+  tidak mengubah order/payment (AC-P6) · verify → paid · verify kedua → 409
+  `PAYMENT_ALREADY_FINAL` · failed → order & payment failed + copy “Start a new order” ·
+  pending → tanpa perubahan · ref milik order lain → 404 · 404 seragam (token salah vs
+  malformed) · header `no-referrer`/`no-store`/`noindex` pada halaman order · 0 pola token dan 0
+  `Idempotency` pada log server · gate `MOCK_GATEWAY_ENABLED=false` → **404** (halaman + API).
+- **Tidak dijalankan (bukan blocker):** AC-T7 pada lapisan HTTP (replay > 24 jam) — sudah
+  diverifikasi di lapisan RPC pada E-3; dispatch outbox/n8n tetap E-7 (E-5 hanya membuat baris
+  outbox di dalam transaksi `settle_payment`).
+- **Blockers / risks:** **Blocker E-5: 0.** `KI-24` tertutup. `KI-25` (429) tetap risiko
+  eksternal E-4. `KI-04` tetap project-level milik E-7.
 - **Completion date:** —
 - **References:** `docs/api-contract.md` §4.3–§4.6, §6 · `docs/database-design.md` §5.1–§5.2 ·
   `docs/mvp-scope.md` §6.1–§6.2, §6.4 · `docs/technical-decisions.md` ADR-5, ADR-6, ADR-7, ADR-10
@@ -513,7 +522,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-21 | `eslint@9.39.5` memunculkan peringatan EOL saat install | Low | **Diterima (warning)** | — | Pantau; naikkan hanya bila seluruh plugin mendukung |
 | KI-22 | Baris outbox `failed` + `attempts = 5` bersifat terminal untuk dispatch; pemulihan hanya lewat runbook operator (bukan jalur aplikasi) | Low | **Diterima** (2026-11-27) | E-7 | Didokumentasikan di ADR-9 §Recovery dan DB §5.3 |
 | KI-23 | `claim_outbox` mengembalikan `locked_at` sebagai string ISO; konversi ke `Date` memutus fencing | Medium | **Dimigasi** (2026-11-27) | E-7 | Dijaga assert `assertOpaqueFencingToken` + TP-2/TP-4 di `tests/integration/outbox.test.ts` |
-| KI-24 | CTA detail paket menuju `/checkout?destination=…&package=…` yang belum ada sampai E-5 → 404 sementara | Low | **Diterima** (2026-11-27) | E-5 | Tidak dibuat stub page; didokumentasikan di README §Limitations |
+| KI-24 | CTA detail paket menuju `/checkout?destination=…&package=…` | Low | **Resolved** (2026-11-27) | — | Ditutup E-5: halaman `/checkout` dan `POST /api/checkout` sudah ada |
 | KI-25 | Sumber gambar eksternal (Wikimedia Commons) dapat membalas **HTTP 429** secara intermiten (`retry-after: 600`, rate limit per-IP) | Medium | **Diterima — risiko eksternal** (2026-11-27) | — | Mitigasi: A″ (`deviceSizes`/`imageSizes` dipersempit, `minimumCacheTTL` 86400) + fallback `onError` yang terverifikasi. **Risiko tidak dihilangkan** |
 | KI-26 | NFR9 contrast ratio belum diaudit terukur (≥ 4.5:1) | Low | **`DEFERRED` — post-MVP** (2026-11-27) | — | Ukur saat polish; token warna sudah ditetapkan di `src/app/globals.css` |
 | KI-27 | NFR9 keyboard baru diuji pada **homepage** (header, CTA, skip-to-content, focus indicator); halaman katalog dan detail paket belum dikonfirmasi | Low | **Terbuka** (2026-11-27) | — | Uji keyboard pada `/destinations` serta detail destinasi/paket sebelum mengklaim NFR9 untuk seluruh storefront |
@@ -535,30 +544,30 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | NA-07 | Analisis + proposal + implementasi E-3 | NA-02 | Selesai (`af53146`, `f4172e1`, `7d18015`) |
 | NA-08 | Sinkronkan `docs/design-solution.md` §5.2 (font) dan `AGENTS.md` (daftar skrip) dengan realitas E-2 | — | **Menunggu persetujuan terpisah** (belum ada izin mengubah dokumen baseline) |
 | NA-09 | Analisis + proposal + implementasi + commit lokal E-4 (Tier P1–P4) | NA-07 | Selesai (`96b69b2`, `33d99f6`, `23f25b4` + commit penutupan) |
-| NA-10 | **Push manual** empat commit E-4 ke `origin/main` | NA-09 | **Ya (pemilik proyek)** |
-| NA-11 | Mulai **E-5 Analysis/Proposal** (bukan izin implementasi) | NA-10 | **Ya (pemilik proyek)** |
+| NA-10 | Push empat commit E-4 ke `origin/main` | NA-09 | **Selesai** 2026-11-27 (`83f961b..dcbd315`, fast-forward) |
+| NA-11 | Analisis + implementasi + verifikasi + commit lokal E-5 | NA-10 | **Selesai** (`feat`/`test`/`docs` E-5) |
+| NA-12 | **Push manual** tiga commit E-5 ke `origin/main` | NA-11 | **Ya (pemilik proyek)** |
+| NA-13 | Mulai **E-6 Analysis/Proposal** (bukan izin implementasi) | NA-12 | **Ya (pemilik proyek)** |
 
 Urutan yang disarankan: **NA-10** (push manual) → **NA-11** (mulai E-5 Analysis/Proposal) → implementasi E-5 hanya setelah proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
 persetujuan terpisah — tanpa izin tersebut, `AGENTS.md` dan `docs/design-solution.md` tidak
 disentuh.
 
-### 7.1 HOLD — pekerjaan E-4…E-8 (tidak boleh dimulai)
+### 7.1 HOLD — pekerjaan E-6…E-8 (tidak boleh dimulai)
 
-E-3 **tidak** berarti MVP selesai. Seluruh item di bawah berstatus **HOLD**: belum
-diimplementasikan, tidak diubah, tidak dihapus, dan menunggu workflow analisis + izin implementasi
-tersendiri.
+E-5 **tidak** berarti MVP selesai. Item di bawah berstatus **HOLD**: belum diimplementasikan,
+tidak diubah, tidak dihapus, dan menunggu workflow analisis + izin implementasi tersendiri.
 
 | Area | Item yang HOLD | Fase | Dependency / alasan HOLD |
 | --- | --- | --- | --- |
-| HTTP route & API | 16 route handler di `docs/api-contract.md` (storefront, checkout, order, verify, mock gateway, admin) | E-4/E-5/E-6 | Skema + RPC sudah ada, tetapi kontrak HTTP, status code, dan error envelope belum diimplementasikan |
-| Validasi & DTO | Zod `strictObject` per endpoint, request/response DTO, masking PII | E-5/E-6 | Butuh route; belum ada satu pun skema request/response di `src/modules/**` |
-| Guest checkout | `POST /api/checkout`, sealing token Node (AES-256-GCM), `request_hash` | E-5 | Bergantung pada ADR-6 dan RPC `create_order_idempotent` (tersedia); logika Node belum ada |
-| Capability URL & guest order | `GET /orders/{token}`, `GET /api/orders/[token]`, header anti-cache/anti-referer, 404 seragam | E-5 | Halaman dan route belum ada; ADR-5/ADR-10 baru terpenuhi di sisi DB |
-| Payment adapter & mapping | `PaymentGatewayAdapter`, `fetchSettlement`, `POST /api/payments/verify`, `/mock-gateway/**` | E-5 | `settle_payment` tersedia; adapter dan pemetaan `409 PAYMENT_ALREADY_FINAL` / `PACKAGE_INACTIVE` belum ada (AC-T7/T9/P3/P4/C2/C4/C6 paruh HTTP) |
+| Admin route & API | 10 route handler admin di `docs/api-contract.md` §5 (`/api/admin/**`) | E-6 | Fondasi katalog, order, dan payment sudah ada; CRUD admin, enrich, dan resend belum |
+| UI admin | `/admin/login`, overview, CRUD destinasi/paket, daftar order & payment, keyset pagination 10 baris | E-6 | Butuh `requireAdmin()` + halaman; belum ada satu pun |
 | Notifikasi & n8n | Dispatcher (`after()`), `claim_outbox`/`finish_outbox` di kode, webhook + `X-Webhook-Secret`, retry 10 s | E-7 | RPC + sweep tersedia; dispatcher, workflow n8n, dan kanal (KI-04) belum dipilih |
-| UI storefront & admin | 13 halaman, komponen `ui/store/admin/layout`, admin login + CRUD + keyset pagination | E-4/E-6 | Foundation UI 3 primitif baru ada; belum ada halaman |
-| AC fase berikutnya | 22 AC: C1, C5, C7, C8 · P6, P7 · A1–A7 · T1–T4, T12, T14 · E1–E3 | E-4…E-8 | Membutuhkan route, UI, adapter, atau n8n. **Jangan** dinaikkan statusnya sebelum bukti baru |
-| 11 AC database-scope | T6, T7, T9, T10, T11, T15, P3, P4, C2, C4, C6 | E-5/E-7 | Paruh database sudah `Verified (database scope)`; paruh HTTP/delivery belum. **Jangan** dinaikkan menjadi `Verified` penuh |
+| AC fase berikutnya | 11 AC: A1–A7 · T12, T14 · E1, E2 | E-6/E-7 | Membutuhkan UI admin, route admin, atau n8n. **Jangan** dinaikkan statusnya sebelum bukti baru |
+| 4 AC database-scope | T7, T10, T11, T15 | E-7 | Paruh database sudah `Verified (database scope)`; paruh HTTP/delivery belum. **Jangan** dinaikkan menjadi `Verified` penuh |
+
+**Sudah keluar dari HOLD:** storefront (E-4) dan checkout/payment/order flow (E-5) — lihat §4 E-4
+dan §4 E-5.
 
 ---
 
@@ -582,6 +591,8 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-27 | E-4 storefront diimplementasikan (P1–P4): modul catalog, 4 halaman, 9 komponen, 2 file unit test; lint/typecheck/build hijau, HTTP 200 & 404 terverifikasi | `IMPLEMENTED` |
 | 2026-11-27 | E-4 sinkronisasi dokumentasi: status → `VERIFIED`; fallback gambar, NFR8, dan NFR9-keyboard PASS (pengujian pengguna), A″ dicatat, KI-01 → approved-for-MVP, KI-25…KI-27 ditambahkan; NFR9 contrast + seleksi aset final `DEFERRED` | `VERIFIED` |
 | 2026-11-27 | E-4 penutupan: 4 commit lokal (`96b69b2`, `33d99f6`, `23f25b4`, commit penutupan), gate lint/typecheck/unit 32-32/production build semuanya PASS, working tree bersih; **belum di-push** | `CLOSED` |
+| 2026-11-27 | E-4 push ke `origin/main`: `83f961b..dcbd315` (fast-forward, tanpa force) | `CLOSED` |
+| 2026-11-27 | E-5 implementasi + verifikasi lokal: checkout/payment/order flow, 3 API + 3 halaman, 27 unit test baru, smoke HTTP 27/27, gate hijau; `KI-24` ditutup; **belum di-commit** | `VERIFIED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:

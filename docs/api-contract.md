@@ -114,6 +114,7 @@ Request headers:
 
 ```json
 {
+  "destinationSlug": "japan",
   "packageSlug": "japan-5gb-15d",
   "quantity": 1,
   "customerName": "Budi Santoso",
@@ -132,7 +133,7 @@ Response `201` (created) or `200` (replay — identical body):
   "orderStatus": "pending",
   "paymentStatus": "pending",
   "capabilityUrl": "https://roamly.example/orders/8Kd2…43chars",
-  "paymentUrl": "https://roamly.example/mock-gateway/mock_9f2c1ab77d0e4f53a1c8b6d2"
+  "paymentUrl": "https://roamly.example/mock-gateway/mock_9f2c1ab77d0e4f53a1c8b6d2?token=<43-char capability token>"
 }
 ```
 
@@ -140,11 +141,16 @@ Rules the implementation must honour:
 
 - The token appears **only** inside `capabilityUrl`; it is never echoed as its own field and
   is never persisted in plaintext.
-- `packageSlug` is resolved to `package_id` through the **public read path** (`anon`
+- `destinationSlug` and `packageSlug` are resolved together through the **public read path** (`anon`
   client, RLS `is_active = true`) — `service_role` has no `SELECT` on `packages` and must not
-  be granted one. `create_order_idempotent` then re-reads the package as its owner
+  be granted one. `UNIQUE (destination_id, slug)` makes the pair resolve to exactly one package.
+  `create_order_idempotent` then re-reads the package as its owner
   (`postgres`) and re-checks `packages.is_active` **and** `destinations.is_active`, so the
   RPC remains authoritative.
+- `paymentUrl` carries the capability token as a query parameter: the simulated gateway needs it
+  to send the customer back to `/orders/<token>`. `/mock-gateway/:path*` already sets
+  `no-referrer`, `no-store`, and `noindex`, so the parameter is the same secrecy class as the
+  order path itself.
 - `totalIdr` is computed in SQL from `packages.price_idr × quantity`; a `price` field in the
   request is rejected by `strictObject` (`422`).
 - The same key with the same normalized payload returns the same `capabilityUrl`.
@@ -154,6 +160,9 @@ Rules the implementation must honour:
 
 Errors: `422 VALIDATION_ERROR`, `404 NOT_FOUND` (package), `409 PACKAGE_INACTIVE`,
 `409 IDEMPOTENCY_*`.
+
+`destinationSlug` is **required** since E-5: the storefront CTA carries both slugs, and the pair
+is the only unambiguous package address.
 
 ### 4.4 `GET /api/orders/[token]`
 
@@ -201,6 +210,9 @@ Flow: validate token against the payment's order → `adapter.fetchSettlement(re
 `settle_payment(ref, outcome)` → schedule outbox dispatch with `after()` when the result is
 `paid`.
 
+`ref` must belong to the order identified by `token`; a token for one order can never settle
+another. Unknown ref, foreign ref, and token mismatch all return the same `404` body.
+
 Trust boundary (mandatory):
 
 - The settlement outcome is taken **only** from `adapter.fetchSettlement(ref)`. The endpoint
@@ -230,7 +242,10 @@ mandatory in production). Writes exactly one row into `mock_gateway_transactions
 { "outcome": "succeeded" }
 ```
 
-`200` `{ "outcome": "succeeded", "ref": "mock_…", "redirectTo": "/orders/<token>?ref=mock_…" }`
+`200` `{ "outcome": "succeeded", "ref": "mock_…", "transition": "created" | "pending_to_terminal" | "replay" | "conflict" }`
+
+The page composes the redirect itself (`/orders/<token>?ref=<ref>`) because only it holds the
+capability token from the URL; the endpoint never receives or echoes a token.
 
 Allowed values: `succeeded`, `failed`, `pending`. `404` for an unknown ref. Any other
 outcome → `422`.
