@@ -48,7 +48,7 @@ Any of these requires a new proposal — not a "while I am here" addition.
 | FR-C1 | The homepage lists up to 5 featured destinations with photo, name, region, and "from" price |
 | FR-C2 | `/destinations` lists all active destinations; inactive ones never appear |
 | FR-C3 | `/destinations/[slug]` shows active packages of that destination with data volume, validity, network, and price |
-| FR-C4 | `/packages/[slug]` shows package detail plus a checkout CTA; unknown or inactive → 404 |
+| FR-C4 | `/destinations/[destinationSlug]/packages/[packageSlug]` shows package detail plus a checkout CTA; unknown or inactive destination **or** package, and a package addressed under the wrong destination, all return 404 |
 | FR-C5 | Checkout requires package slug, quantity 1–5, name, email, phone; price is never taken from the browser |
 | FR-C6 | Checkout is idempotent via `Idempotency-Key`: at most one order per key |
 | FR-C7 | After order creation the customer is redirected to the simulated gateway page |

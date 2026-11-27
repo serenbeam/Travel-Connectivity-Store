@@ -63,20 +63,20 @@ Aturan tambahan:
 | Field | Nilai |
 | --- | --- |
 | Fase terakhir selesai | **E-2a Git Commit & Push — `COMPLETED`** (2026-11-26) |
-| Fase aktif | **E-3 Schema & RLS — `CLOSED`** (commit `7d18015`, push 2026-11-27) |
+| Fase aktif | **E-4 Storefront & Seed — `VERIFIED`** (belum di-commit; NFR9 contrast & seleksi aset final `DEFERRED`) |
 | Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
 | Fase selesai | **3 / 10 (30%)** + 1 checkpoint tanpa bobot (E-2a) |
-| Acceptance criteria terverifikasi | **9 penuh + 11 database-scope / 42** (lihat §4 E-3) |
-| Kode aplikasi | **25 file foundation** + `src/lib/supabase/admin.ts` |
+| Acceptance criteria terverifikasi | **10 penuh + 11 database-scope + 21 pending / 42** (AC-E3 diverifikasi di E-4; lihat §4 E-3 dan §4 E-4) |
+| Kode aplikasi | **34 file** di `src/**` (`.ts`/`.tsx`): 14 ter-track sebelum E-4, 20 baru dari E-4; 1 placeholder (`src/app/page.tsx`) dihapus |
 | Migration | **6** (`supabase/migrations/`) |
-| Test dijalankan | **11 unit** (1 file) + **85 integration** (8 file) |
+| Test dijalankan | **32 unit** (3 file) + **85 integration** (8 file) |
 | Deployment | **belum dikonfigurasi** |
-| Blocker terbuka | 2 (`KI-01`, `KI-04`) |
-| Persetujuan yang ditunggu | tidak ada — E-4 menunggu workflow analisis tersendiri |
+| Blocker terbuka | **0 untuk E-4** · 1 project-level (`KI-04`, milik E-7) |
+| Persetujuan yang ditunggu | 1 (izin **commit & push** E-4) |
 
-Ringkasan satu kalimat: **E-3 (skema, RLS, lima SQL function) selesai, terverifikasi lokal, dan sudah
-ter-push (`7d18015`); seluruh pekerjaan E-4…E-9 berstatus HOLD dan belum dimulai.**
+Ringkasan satu kalimat: **E-3 selesai dan ter-push (`7d18015`); E-4 storefront terimplementasi dan
+terverifikasi lokal tetapi belum di-commit; E-5…E-9 berstatus HOLD.**
 
 ---
 
@@ -90,7 +90,7 @@ ter-push (`7d18015`); seluruh pekerjaan E-4…E-9 berstatus HOLD dan belum dimul
 | E-1 | Documentation | `COMPLETED` | 10% |
 | E-2 | Foundation | `COMPLETED` | 10% |
 | E-3 | Schema & RLS | `CLOSED` | 12% |
-| E-4 | Storefront & Seed | `NOT STARTED` | 12% |
+| E-4 | Storefront & Seed | `VERIFIED` (belum di-commit) | 12% |
 | E-5 | Checkout, Payment & Idempotency | `NOT STARTED` | 18% |
 | E-6 | Admin CMS | `NOT STARTED` | 12% |
 | E-7 | n8n & Outbox | `NOT STARTED` | 8% |
@@ -276,7 +276,8 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
   satu-satunya kunci adalah kunci demo Supabase lokal di `supabase/.temp/` (gitignored) ·
   **NV-05 lulus**: 21 deviasi dokumen (D-01…D-21) ditutup atau dicatat · `npm run lint` 0 error/0
   warning · `npm run typecheck` 0 error · `npm run test` 11/11 · `npm run test:int` **85/85** (8 file) ·
-  AC: **9 penuh + 11 database-scope**.
+  AC: **9 penuh + 11 database-scope** (saat penutupan E-3). Sejak 2026-11-27, AC-E3 diverifikasi
+  di E-4 sehingga hitungan kumulatif menjadi **10 penuh + 11 database-scope + 21 pending**.
 - **Temuan yang diklasifikasikan:**
   - D-14 (**non-blocker, laten**): `pg_default_acl` untuk fungsi buatan `postgres` di schema `public`
     hanya memberi `EXECUTE` ke `postgres`, sehingga kebocoran grant ke `anon`/`authenticated` **tidak
@@ -296,22 +297,57 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 - **References:** `docs/database-design.md` §2–§6 · `docs/technical-decisions.md` ADR-4, ADR-6, ADR-7,
   ADR-9, ADR-10 · `docs/api-contract.md` §4.3–§4.6 · `AGENTS.md` §Forbidden patterns · DL-24…DL-28
 
-### E-4 — Storefront & Seed — `NOT STARTED`
+### E-4 — Storefront & Seed — `VERIFIED` (belum di-commit)
 
 - **Objective:** Storefront yang dapat dijelajahi end-to-end dengan data seed dan aset final.
+  - *Catatan (2026-11-27):* rumusan di atas dipertahankan sebagai objective historis. Untuk MVP,
+    lima foto destinasi yang tersedia **disetujui untuk penggunaan MVP**; **seleksi dan final
+    approval aset ditunda ke post-MVP**. Persetujuan penggunaan MVP **bukan** final asset approval
+    (lihat KI-01).
 - **Tasks:**
-  - [ ] Layout store + homepage
-  - [ ] `/destinations` (filter region)
-  - [ ] `/destinations/[slug]` daftar paket
-  - [ ] `/packages/[slug]` detail + CTA
-  - [ ] Aset final terpasang setelah review visual (attribution tersimpan)
-  - [ ] Data seed dengan URL & atribusi aset final
-- **Status:** `NOT STARTED`
-- **Verification result:** Belum ada. Bukti yang diperlukan: screenshot desktop + 375px,
-  tidak ada gambar rusak (fallback bekerja), atribusi tampil di halaman detail destinasi.
-- **Blockers / risks:** `KI-01` aset belum disetujui visual → memblokir finalisasi seed aset.
+  - [x] Layout store + homepage (hero + 5 kartu destinasi)
+  - [x] `/destinations` + filter region `?region=Asia|Europe` (nilai dari database)
+  - [x] `/destinations/[destinationSlug]` daftar paket + atribusi
+  - [x] `/destinations/[destinationSlug]/packages/[packageSlug]` detail + CTA (D-01, D-05)
+  - [x] Lima foto destinasi dipakai untuk MVP — **approved for MVP use**; seleksi aset final `DEFERRED` post-MVP (KI-01)
+  - [x] Data seed dipakai apa adanya dengan URL & atribusi kandidat (tanpa perubahan seed)
+- **Status:** `VERIFIED` — implementasi dan verifikasi lokal selesai; **belum di-commit**.
+  NFR9 contrast dan seleksi aset final berstatus `DEFERRED` (post-MVP).
+- **Verification result:** lint 0/0 · typecheck 0 · unit 32/32 (11 E-2 + 21 baru) · build tanpa env
+  hijau · semua route katalog `ƒ` (dynamic, D-07) · HTTP: `/`, `/destinations`, `?region=Asia` (4),
+  `?region=Europe` (1), `?region=Mars` (empty), detail destinasi (3 paket: 89/145/249 k), detail
+  paket (Rp 145.000, CTA `?destination=japan&package=japan-5gb-15d`) → 200 · **tiga skenario 404**
+  (destinasi tak dikenal, paket tak dikenal, paket valid di destinasi salah) → 404 dengan copy 404
+  yang sama (R-01) · `/_next/image` memakai optimizer untuk `upload.wikimedia.org` (remotePatterns
+  aktif) · 0 UUID internal di HTML · 0 request `countriesnow.space` (AC-E3).
+- **Optimasi gambar A″ (`next.config.ts`):** `deviceSizes = [640, 828, 1080, 1200]`,
+  `imageSizes = [128, 256, 384]`, `minimumCacheTTL = 86400`. Pengukuran yang dilaporkan:
+  variasi gambar **10 → 6**, kombinasi `(src,width)` **50 → 30**, WebP **±31–43 KB** dibanding
+  sumber asli **±7,8 MB**. Angka tersebut hasil pengukuran pada sampel yang diuji, **bukan
+  jaminan** ukuran untuk semua gambar.
+- **Verifikasi manual — fallback gambar:** **PASS** — diuji dengan Chrome DevTools saat request
+  gambar diblokir: panel `sand` + emoji + nama tampil, layout utuh, tanpa uncaught exception, dan
+  gambar kembali setelah blocking dimatikan.
+- **NFR8 (responsif 375/768/1280):** **PASS** berdasarkan pengujian pengguna.
+- **NFR9 keyboard:** **PASS pada homepage** — navigasi keyboard mencapai header dan CTA,
+  skip-to-content tersedia, dan focus indicator terlihat. Pengujian menyeluruh pada halaman
+  katalog (`/destinations`, detail destinasi) dan detail paket **belum dikonfirmasi**, sehingga
+  NFR9 keyboard **tidak** diklaim untuk seluruh storefront (KI-27).
+- **`DEFERRED` (post-MVP):** NFR9 contrast ratio (belum diukur) dan seleksi aset final.
+- **Blocker E-4:** **0**.
+- **Risiko / item diterima (bukan blocker):** `KI-24` (CTA `/checkout` 404 sampai E-5) · `KI-25`
+  (Wikimedia HTTP 429, eksternal, **tidak dihilangkan**) · `KI-26` (NFR9 contrast `DEFERRED`) ·
+  `KI-27` (cakupan uji keyboard baru homepage).
+- **Project-level blocker (bukan milik E-4):** `KI-04` — kanal notifikasi n8n belum dipilih, milik
+  E-7; tidak menghalangi E-4.
 - **Completion date:** —
-- **References:** `docs/design-solution.md` §3, §6, §8 · `docs/architecture.md` §5.1
+- **References:** `docs/design-solution.md` §3, §6, §8 · `docs/architecture.md` §5.1 ·
+  `docs/mvp-scope.md` FR-C1…C4 · DL-27
+
+**Backlog OPTIONAL pasca-MVP (tidak dikerjakan di E-4):** homepage how-it-works + trust strip ·
+compare-at price display · breadcrumb (dipasang minimal) · `loading.tsx` skeleton · metadata per
+halaman · dua public JSON endpoint · mobile sticky bottom bar · font self-hosted · sort/search
+katalog · RTL/component test.
 
 ### E-5 — Checkout, Payment & Idempotency — `NOT STARTED`
 
@@ -442,6 +478,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-24 | 2026-11-27 | `locked_at` diperlakukan sebagai opaque fencing token string; dilarang dikonversi ke `Date` | Implemented + Verified | DB §5.3–§5.4 · `tests/integration/outbox.test.ts`, `support/assert.ts` |
 | DL-25 | 2026-11-27 | `.env.test` dimuat dengan parser eksplisit + penolakan konflik (bukan `process.loadEnvFile`, yang tidak menimpa env yang sudah ada) dan guard loopback wajib | Implemented + Verified | `tests/integration/support/env.ts`, `global-setup.ts` · `meta.test.ts` |
 | DL-26 | 2026-11-27 | Penutupan Git E-3 dalam tiga commit terpisah (database · test · docs) lalu push fast-forward ke `origin/main`; tanpa amend, squash, atau force | Implemented + Verified | `af53146`, `f4172e1`, `7d18015` · `7c80675..7d18015` |
+| DL-27 | 2026-11-27 | Paket dialamatkan dengan **dua slug** (`/destinations/[destinationSlug]/packages/[packageSlug]`) sehingga `UNIQUE (destination_id, slug)` menjadi penentu, tanpa perubahan skema (D-01) | Implemented | `src/app/(storefront)/destinations/[destinationSlug]/packages/[packageSlug]/page.tsx` · `src/modules/catalog/queries.ts` |
 | DL-22 | 2026-11-26 | `settle_payment` hanya `succeeded`/`failed`; `record_mock_settlement` menerima 3 outcome (`pending` boleh naik ke terminal, terminal immutable) | Approved (desain) | DB §5.2, §5.5 · API §4.5 |
 | DL-23 | 2026-11-26 | `orders.package_data_snapshot` (turunan deterministik), kardinalitas order→payment **at most one**, pencarian admin **exact match** | Approved (desain) | DB §1, §2.2, §2.3 · API §5.4 |
 
@@ -451,7 +488,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 
 | ID | Isu | Severity | Jenis | Blokir fase | Next step |
 | --- | --- | --- | --- | --- | --- |
-| KI-01 | Aset destinasi berstatus `REVIEW`, belum disetujui visual | Medium | Terbuka | E-4 | Review manusia atas 5 primary image |
+| KI-01 | Aset destinasi: lima foto yang dipakai **approved for MVP use**; seleksi aset final ditunda | Low | **Diterima untuk MVP** (2026-11-27) | — | Final asset selection = post-MVP; atribusi tetap tampil di halaman detail destinasi |
 | KI-02 | Supabase CLI belum terpasang (Docker 29.9.2 tersedia) | Medium | **Resolved** (2026-11-27) | — | CLI 3.4.0 dijalankan via `npx`; belum dipin sebagai devDependency (keputusan terpisah) |
 | KI-03 | Dependency di-install | Medium | **Resolved** (2026-11-26) | — | 397 paket terpasang, lockfile v3, commit `7ed8371` |
 | KI-04 | Kanal pengiriman n8n belum dipilih (asumsi A4) | Low | Terbuka | E-7 | Putuskan SMTP/chat sink |
@@ -466,6 +503,10 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-21 | `eslint@9.39.5` memunculkan peringatan EOL saat install | Low | **Diterima (warning)** | — | Pantau; naikkan hanya bila seluruh plugin mendukung |
 | KI-22 | Baris outbox `failed` + `attempts = 5` bersifat terminal untuk dispatch; pemulihan hanya lewat runbook operator (bukan jalur aplikasi) | Low | **Diterima** (2026-11-27) | E-7 | Didokumentasikan di ADR-9 §Recovery dan DB §5.3 |
 | KI-23 | `claim_outbox` mengembalikan `locked_at` sebagai string ISO; konversi ke `Date` memutus fencing | Medium | **Dimigasi** (2026-11-27) | E-7 | Dijaga assert `assertOpaqueFencingToken` + TP-2/TP-4 di `tests/integration/outbox.test.ts` |
+| KI-24 | CTA detail paket menuju `/checkout?destination=…&package=…` yang belum ada sampai E-5 → 404 sementara | Low | **Diterima** (2026-11-27) | E-5 | Tidak dibuat stub page; didokumentasikan di README §Limitations |
+| KI-25 | Sumber gambar eksternal (Wikimedia Commons) dapat membalas **HTTP 429** secara intermiten (`retry-after: 600`, rate limit per-IP) | Medium | **Diterima — risiko eksternal** (2026-11-27) | — | Mitigasi: A″ (`deviceSizes`/`imageSizes` dipersempit, `minimumCacheTTL` 86400) + fallback `onError` yang terverifikasi. **Risiko tidak dihilangkan** |
+| KI-26 | NFR9 contrast ratio belum diaudit terukur (≥ 4.5:1) | Low | **`DEFERRED` — post-MVP** (2026-11-27) | — | Ukur saat polish; token warna sudah ditetapkan di `src/app/globals.css` |
+| KI-27 | NFR9 keyboard baru diuji pada **homepage** (header, CTA, skip-to-content, focus indicator); halaman katalog dan detail paket belum dikonfirmasi | Low | **Terbuka** (2026-11-27) | — | Uji keyboard pada `/destinations` serta detail destinasi/paket sebelum mengklaim NFR9 untuk seluruh storefront |
 
 Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum ditemukan.
 
@@ -527,6 +568,8 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-27 | E-3 implementasi + verifikasi lokal: 6 migration, seed, `admin.ts`, harness; 85/85 integration, 11/11 unit, lint 0/0, typecheck 0; NV-01…NV-05 lulus | `VERIFIED` |
 | 2026-11-27 | E-3 penutupan Git: `af53146` + `f4172e1` + `7d18015`, push fast-forward `7c80675..7d18015` ke `origin/main` | `CLOSED` |
 | 2026-11-27 | E-4…E-8 tetap `HOLD`; 22 AC menunggu fase berikutnya, 11 AC tetap database-scope | `HOLD` |
+| 2026-11-27 | E-4 storefront diimplementasikan (P1–P4): modul catalog, 4 halaman, 9 komponen, 2 file unit test; lint/typecheck/build hijau, HTTP 200 & 404 terverifikasi | `IMPLEMENTED` |
+| 2026-11-27 | E-4 sinkronisasi dokumentasi: status → `VERIFIED`; fallback gambar, NFR8, dan NFR9-keyboard PASS (pengujian pengguna), A″ dicatat, KI-01 → approved-for-MVP, KI-25…KI-27 ditambahkan; NFR9 contrast + seleksi aset final `DEFERRED` | `VERIFIED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:

@@ -1,7 +1,7 @@
 # Design Solution
 
-Status: `Approved` (direction). Imagery: **`REVIEW`** — candidates verified technically,
-not yet visually approved by a human.
+Status: `Approved` (direction). Imagery: **`APPROVED FOR MVP`** — the five candidates were
+verified technically and are approved for MVP use; final asset selection is deferred to post-MVP.
 
 Owns product concept, flows, sitemap, visual tokens, page layouts, and asset strategy.
 Scope boundaries live in [`mvp-scope.md`](mvp-scope.md); technical rationale in
@@ -37,7 +37,7 @@ stacked shadows, chart decoration, animation for its own sake.
 /                              Homepage
 /destinations                  All destinations (+ region chips)
 /destinations/[slug]           Packages for one destination
-/packages/[slug]               Package detail → checkout CTA
+/destinations/[slug]/packages/[packageSlug]  Package detail → checkout CTA
 /checkout                      Guest form + order summary (single page)
 /orders/[token]                Order + payment status (capability link)
 /mock-gateway/[ref]            Payment simulation (noindex, disabled in production)
@@ -147,7 +147,7 @@ is designed "mobile only" or hidden to make a breakpoint fit.
 | **Homepage** | 12-col grid. Hero: 6 cols serif headline + supporting line + primary CTA, 6 cols 16:9 photo. Then 5 destination cards in a 2/3-col grid, then "how it works" (3 numbered steps), then a forest-coloured trust strip, then footer | `< md`: hero stacks, photo below headline at 4:3; cards 1 per row |
 | **Destination list** | Region chips above a 3-col card grid. Card = photo 4:3, name, `n packages`, "from IDR …" | 2-col at `md`, 1-col `< sm`; chips scroll horizontally |
 | **Destination detail** | Header with destination name, flag emoji, region, one-line summary. Package cards in 2 cols: data volume + validity as the headline, price right-aligned, 3 bullet features | 1-col `< md` |
-| **Package detail** | 2 cols: content (what you get, validity, network, notes) 7 cols; sticky order card 5 cols with price, total, and "Continue to checkout" | `< lg`: order card becomes a bottom sticky bar with price + CTA |
+| **Package detail** (`/destinations/[slug]/packages/[packageSlug]`) | 2 cols: content (what you get, validity, network, notes) 7 cols; sticky order card 5 cols with price, total, and "Continue to checkout" | `< lg`: order card becomes a bottom sticky bar with price + CTA |
 | **Checkout** | 2 cols: form 7 cols (name, email, phone, optional quantity), summary 5 cols (destination, package, unit price, total, terms note) | `< lg`: summary collapses above the form as a compact accordion |
 | **Order status** | Centered single column, max 640px. Status panel (colour + label + one-sentence meaning), order facts, payment facts, then one contextual action | Single column always; no horizontal scroll at 320px |
 | **Admin** | Sidebar 240px, header with page title + primary action, content area. Tables: 10 rows, sticky header, `Next`/`Previous` keyset controls | `< lg`: sidebar becomes a drawer; tables become stacked key-value rows |
@@ -189,12 +189,13 @@ components never import a Supabase client.
 Direction: real destination photography, no illustration, no custom artwork for the MVP.
 Attribution is part of the data model (`destinations.hero_image_attribution`).
 
-### 8.1 Candidate list — status `REVIEW`
+### 8.1 Candidate list — status `APPROVED FOR MVP` (final selection deferred)
 
 All URLs below were verified as reachable (`HTTP 206`, `image/jpeg`, ranged GET) on
-26 Nov 2026. Dimensions come from the source metadata. **Visual suitability has not been
-assessed** — no vision tool was available during design, so a human must approve or replace
-each primary image before it is shipped.
+26 Nov 2026. Dimensions come from the source metadata. **The five primary images are
+approved for MVP use** (2026-11-27). **Final asset selection is deferred to post-MVP** — this is
+not a final asset approval. Licence and credit for each photo live in
+`destinations.hero_image_attribution` and are rendered on the destination page.
 
 | Slot | Role | Direct URL | Dimensions | Licence | Credit | Source page |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -229,7 +230,7 @@ Notes:
 | `onError` → `sand` panel with country flag emoji and name | No broken images |
 | Priority loading only for the homepage hero; everything else lazy | Performance |
 | Max 3 candidates per destination, thumbnails for review before committing | Token and time efficiency |
-| No asset is committed until a human approves the visual | Honest status `REVIEW` |
+| Images stay remote (no binary committed); the five primaries are approved for MVP | Honest status: `APPROVED FOR MVP`, final selection deferred |
 
 ## 9. Copy and tone
 
