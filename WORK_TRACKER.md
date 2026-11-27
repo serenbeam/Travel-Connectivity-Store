@@ -63,8 +63,8 @@ Aturan tambahan:
 | Field | Nilai |
 | --- | --- |
 | Fase terakhir selesai | **E-2a Git Commit & Push — `COMPLETED`** (2026-11-26) |
-| Fase aktif | **E-3 Schema & RLS — `COMPLETED`** (implementasi + verifikasi 2026-11-27; **belum di-commit**) |
-| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
+| Fase aktif | **E-3 Schema & RLS — `CLOSED`** (commit `7d18015`, push 2026-11-27) |
+| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
 | Fase selesai | **3 / 10 (30%)** + 1 checkpoint tanpa bobot (E-2a) |
 | Acceptance criteria terverifikasi | **9 penuh + 11 database-scope / 42** (lihat §4 E-3) |
@@ -73,10 +73,10 @@ Aturan tambahan:
 | Test dijalankan | **11 unit** (1 file) + **85 integration** (8 file) |
 | Deployment | **belum dikonfigurasi** |
 | Blocker terbuka | 2 (`KI-01`, `KI-04`) |
-| Persetujuan yang ditunggu | 1 (izin **commit/push** E-3) |
+| Persetujuan yang ditunggu | tidak ada — E-4 menunggu workflow analisis tersendiri |
 
-Ringkasan satu kalimat: **E-3 (skema, RLS, lima SQL function) terimplementasi dan terverifikasi di
-stack lokal — 85 integration test hijau — tetapi belum di-commit; fitur bisnis (E-4…E-9) belum dimulai.**
+Ringkasan satu kalimat: **E-3 (skema, RLS, lima SQL function) selesai, terverifikasi lokal, dan sudah
+ter-push (`7d18015`); seluruh pekerjaan E-4…E-9 berstatus HOLD dan belum dimulai.**
 
 ---
 
@@ -89,7 +89,7 @@ stack lokal — 85 integration test hijau — tetapi belum di-commit; fitur bisn
 | E-0 | Planning | `COMPLETED` | 10% |
 | E-1 | Documentation | `COMPLETED` | 10% |
 | E-2 | Foundation | `COMPLETED` | 10% |
-| E-3 | Schema & RLS | `COMPLETED` (lokal, belum di-commit) | 12% |
+| E-3 | Schema & RLS | `CLOSED` | 12% |
 | E-4 | Storefront & Seed | `NOT STARTED` | 12% |
 | E-5 | Checkout, Payment & Idempotency | `NOT STARTED` | 18% |
 | E-6 | Admin CMS | `NOT STARTED` | 12% |
@@ -247,7 +247,7 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 - **Completion date:** 2026-11-26
 - **References:** commit `7ed8371`, `5d5895f`
 
-### E-3 — Schema & RLS — `COMPLETED`
+### E-3 — Schema & RLS — `CLOSED`
 
 - **Objective:** Menyediakan skema database, constraint, index, RLS, dan lima SQL function
   yang menjadi dasar seluruh alur transaksi dan idempotency.
@@ -264,7 +264,10 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
   - [x] Integration test: constraint, transaksi, idempotency (10 request paralel), RLS + privilege matrix, terminal immutability, snapshot paket, state machine settlement, outbox claim/fencing + race sweep
   - [x] Verifikasi NV-01…NV-05 (NV-03a lokal; `db push` remote **tidak dijalankan**)
   - [x] `npx supabase db reset` dua kali: 6 migration, `destinations=5`, `packages=15`
-- **Status:** `VERIFIED` (lokal). Belum di-commit.
+- **Status:** `CLOSED` — terverifikasi lokal, ter-commit, dan ter-push.
+- **Git:** commit `af53146` (database foundation) · `f4172e1` (admin client + integration tests) ·
+  `7d18015` (docs) · push fast-forward `7c80675..7d18015` ke `origin/main` (2026-11-27).
+  `origin/main` = `7d18015`; working tree bersih saat push; tanpa `--force`, tanpa amend, tanpa squash.
 - **Verification result:** `db reset` ×2 bersih (6 migration, 5 destinasi, 15 paket, idempoten) ·
   **NV-01/NV-02 lulus** · **NV-03a lulus**: matriks privilege efektif sesuai desain (5 RPC hanya
   `service_role`, `is_admin()` hanya `authenticated` dan tetap `prosecdef = false`, 7 trigger function
@@ -438,6 +441,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-23 | 2026-11-27 | `claim_outbox` menyapu baris `processing` dengan `attempts >= 5` dan lease kedaluwarsa menjadi `failed` (`lease_expired_after_max_attempts`) sebelum klaim; tanpa field tambahan di respons | Implemented + Verified | `supabase/migrations/20261126090005_functions.sql` · ADR-9 · `tests/integration/outbox.test.ts` |
 | DL-24 | 2026-11-27 | `locked_at` diperlakukan sebagai opaque fencing token string; dilarang dikonversi ke `Date` | Implemented + Verified | DB §5.3–§5.4 · `tests/integration/outbox.test.ts`, `support/assert.ts` |
 | DL-25 | 2026-11-27 | `.env.test` dimuat dengan parser eksplisit + penolakan konflik (bukan `process.loadEnvFile`, yang tidak menimpa env yang sudah ada) dan guard loopback wajib | Implemented + Verified | `tests/integration/support/env.ts`, `global-setup.ts` · `meta.test.ts` |
+| DL-26 | 2026-11-27 | Penutupan Git E-3 dalam tiga commit terpisah (database · test · docs) lalu push fast-forward ke `origin/main`; tanpa amend, squash, atau force | Implemented + Verified | `af53146`, `f4172e1`, `7d18015` · `7c80675..7d18015` |
 | DL-22 | 2026-11-26 | `settle_payment` hanya `succeeded`/`failed`; `record_mock_settlement` menerima 3 outcome (`pending` boleh naik ke terminal, terminal immutable) | Approved (desain) | DB §5.2, §5.5 · API §4.5 |
 | DL-23 | 2026-11-26 | `orders.package_data_snapshot` (turunan deterministik), kardinalitas order→payment **at most one**, pencarian admin **exact match** | Approved (desain) | DB §1, §2.2, §2.3 · API §5.4 |
 
@@ -477,13 +481,32 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | NA-04 | Pilih kanal notifikasi n8n | — | **Ya (pemilik proyek)** |
 | NA-05 | Setujui `git init` + `.gitignore` | — | Selesai (`5d5895f`, `.gitignore` di `7ed8371`) |
 | NA-06 | Jalankan E-2 langkah pertama setelah NA-02 | NA-02 | Selesai |
-| NA-07 | Menunggu persetujuan untuk memulai **E-3 Analysis/Proposal** (bukan izin implementasi E-3) | NA-02 | **Ya** |
+| NA-07 | Analisis + proposal + implementasi E-3 | NA-02 | Selesai (`af53146`, `f4172e1`, `7d18015`) |
 | NA-08 | Sinkronkan `docs/design-solution.md` §5.2 (font) dan `AGENTS.md` (daftar skrip) dengan realitas E-2 | — | **Menunggu persetujuan terpisah** (belum ada izin mengubah dokumen baseline) |
+| NA-09 | Mulai **E-4 Analysis/Proposal** (bukan izin implementasi) | NA-07 | **Ya (pemilik proyek)** |
 
-Urutan yang disarankan: **NA-07** (mulai E-3 Analysis/Proposal) → implementasi E-3 hanya setelah
-proposal E-3 disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
+Urutan yang disarankan: **NA-09** (mulai E-4 Analysis/Proposal) → implementasi E-4 hanya setelah
+proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
 persetujuan terpisah — tanpa izin tersebut, `AGENTS.md` dan `docs/design-solution.md` tidak
 disentuh.
+
+### 7.1 HOLD — pekerjaan E-4…E-8 (tidak boleh dimulai)
+
+E-3 **tidak** berarti MVP selesai. Seluruh item di bawah berstatus **HOLD**: belum
+diimplementasikan, tidak diubah, tidak dihapus, dan menunggu workflow analisis + izin implementasi
+tersendiri.
+
+| Area | Item yang HOLD | Fase | Dependency / alasan HOLD |
+| --- | --- | --- | --- |
+| HTTP route & API | 16 route handler di `docs/api-contract.md` (storefront, checkout, order, verify, mock gateway, admin) | E-4/E-5/E-6 | Skema + RPC sudah ada, tetapi kontrak HTTP, status code, dan error envelope belum diimplementasikan |
+| Validasi & DTO | Zod `strictObject` per endpoint, request/response DTO, masking PII | E-5/E-6 | Butuh route; belum ada satu pun skema request/response di `src/modules/**` |
+| Guest checkout | `POST /api/checkout`, sealing token Node (AES-256-GCM), `request_hash` | E-5 | Bergantung pada ADR-6 dan RPC `create_order_idempotent` (tersedia); logika Node belum ada |
+| Capability URL & guest order | `GET /orders/{token}`, `GET /api/orders/[token]`, header anti-cache/anti-referer, 404 seragam | E-5 | Halaman dan route belum ada; ADR-5/ADR-10 baru terpenuhi di sisi DB |
+| Payment adapter & mapping | `PaymentGatewayAdapter`, `fetchSettlement`, `POST /api/payments/verify`, `/mock-gateway/**` | E-5 | `settle_payment` tersedia; adapter dan pemetaan `409 PAYMENT_ALREADY_FINAL` / `PACKAGE_INACTIVE` belum ada (AC-T7/T9/P3/P4/C2/C4/C6 paruh HTTP) |
+| Notifikasi & n8n | Dispatcher (`after()`), `claim_outbox`/`finish_outbox` di kode, webhook + `X-Webhook-Secret`, retry 10 s | E-7 | RPC + sweep tersedia; dispatcher, workflow n8n, dan kanal (KI-04) belum dipilih |
+| UI storefront & admin | 13 halaman, komponen `ui/store/admin/layout`, admin login + CRUD + keyset pagination | E-4/E-6 | Foundation UI 3 primitif baru ada; belum ada halaman |
+| AC fase berikutnya | 22 AC: C1, C5, C7, C8 · P6, P7 · A1–A7 · T1–T4, T12, T14 · E1–E3 | E-4…E-8 | Membutuhkan route, UI, adapter, atau n8n. **Jangan** dinaikkan statusnya sebelum bukti baru |
+| 11 AC database-scope | T6, T7, T9, T10, T11, T15, P3, P4, C2, C4, C6 | E-5/E-7 | Paruh database sudah `Verified (database scope)`; paruh HTTP/delivery belum. **Jangan** dinaikkan menjadi `Verified` penuh |
 
 ---
 
@@ -501,6 +524,9 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-26 | E-2a checkpoint Git: commit `7ed8371` di `main`, `origin/main` sinkron | `COMPLETED` |
 | 2026-11-26 | E-2b: tracker disinkronkan dengan E-2/E-2a; dokumen baseline & kode tidak diubah | `COMPLETED` |
 | 2026-11-26 | E-3 rekonsiliasi dokumentasi D-1…D-11 (5 dokumen); implementasi tetap belum diizinkan | `COMPLETED` |
+| 2026-11-27 | E-3 implementasi + verifikasi lokal: 6 migration, seed, `admin.ts`, harness; 85/85 integration, 11/11 unit, lint 0/0, typecheck 0; NV-01…NV-05 lulus | `VERIFIED` |
+| 2026-11-27 | E-3 penutupan Git: `af53146` + `f4172e1` + `7d18015`, push fast-forward `7c80675..7d18015` ke `origin/main` | `CLOSED` |
+| 2026-11-27 | E-4…E-8 tetap `HOLD`; 22 AC menunggu fase berikutnya, 11 AC tetap database-scope | `HOLD` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:
