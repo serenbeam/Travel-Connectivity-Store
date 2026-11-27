@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from './cn';
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60';
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60';
 
 const VARIANTS = {
   primary: 'bg-forest text-white hover:bg-ink',
@@ -13,6 +13,18 @@ const VARIANTS = {
 } as const;
 
 export type ButtonVariant = keyof typeof VARIANTS;
+
+/**
+ * Shared class map so link-shaped triggers (`ButtonLink`) stay visually identical to
+ * `Button` without duplicating the variant table. `min-h-11` guarantees the 44px touch
+ * target required by docs/design-solution.md §10.
+ */
+export function buttonClassName(
+  variant: ButtonVariant = 'primary',
+  className?: string,
+): string {
+  return cn(BASE, VARIANTS[variant], className);
+}
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
@@ -37,7 +49,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={cn(BASE, VARIANTS[variant], className)}
+      className={buttonClassName(variant, className)}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...rest}
