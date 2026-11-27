@@ -62,20 +62,22 @@ Aturan tambahan:
 
 | Field | Nilai |
 | --- | --- |
-| Fase terakhir selesai | **E-5 Checkout, Payment & Idempotency — `CLOSED`** (2026-11-27, 3 commit + push) |
+| Fase terakhir selesai | **E-5 Checkout, Payment & Idempotency — `CLOSED`** (2026-11-27, 3 commit + push, + 3 commit pasca-penutupan) |
 | Fase aktif | **E-5 Checkout, Payment & Idempotency — `CLOSED`** · berikutnya E-6 (belum dimulai) |
-| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · E-5: `5fc02d6`, `5565b5b`, `220517c` (ter-push) · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
+| Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · E-5: `5fc02d6`, `5565b5b`, `220517c` (ter-push) · pasca-penutupan: `9cd350d`, `d429ce7`, + commit dokumentasi ini (2026-11-27) · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
-| Fase selesai | **5 / 10 (60%)** + 1 checkpoint tanpa bobot (E-2a) |
+| Fase selesai | **6 / 10 (60%)** + 1 checkpoint tanpa bobot (E-2a) |
 | Acceptance criteria terverifikasi | **27 penuh + 4 database-scope + 11 pending / 42** (E-5 memverifikasi 18 AC baru; sisa database-scope: T7, T10, T11, T15 — menunggu E-7) |
-| Kode aplikasi | **52 file** di `src/**` (`.ts`/`.tsx`): 34 sebelum E-5, 19 ditambahkan E-5 (1 placeholder dihapus di E-4) |
+| Kode aplikasi | **53 file** di `src/**` (`.ts`/`.tsx`): 34 sebelum E-5, 19 ditambahkan E-5, 1 modul `checkout-key.ts` pasca-penutupan, dikurangi 1 placeholder yang dihapus di E-4 |
 | Migration | **6** (`supabase/migrations/`) |
-| Test dijalankan | **59 unit** (6 file) + **85 integration** (8 file) + smoke HTTP 27/27 |
+| Test dijalankan | **95 unit** (7 file) + **85 integration** (8 file) + smoke HTTP 27/27 · production build PASS (12 route) · DB integrity 7×0 |
+| Browser E2E | **M1–M4 PASS (user-attested)**; tidak ada artefak berlabel, screenshot, atau laporan Playwright (E-8) |
 | Deployment | **belum dikonfigurasi** |
 | Blocker terbuka | **0 untuk E-4/E-5** · 1 project-level (`KI-04`, milik E-7) |
-| Persetujuan yang ditunggu | tidak ada untuk E-5 (3 commit sudah di-push) · E-6 menunggu analisis tersendiri |
+| Persetujuan yang ditunggu | tidak ada · 8 path pasca-penutupan sudah di-commit (3 commit) · E-6 menunggu analisis tersendiri |
 
-Ringkasan satu kalimat: **E-5 checkout/payment/order `CLOSED` dan ter-push (`220517c`);
+Ringkasan satu kalimat: **E-5 checkout/payment/order `CLOSED` dan ter-push (`220517c`),
+termasuk penyempurnaan pasca-penutupan yang sudah di-commit (3 commit, 2026-11-27);
 E-6…E-9 berstatus `NOT STARTED`.**
 
 ---
@@ -97,8 +99,9 @@ E-6…E-9 berstatus `NOT STARTED`.**
 | E-8 | Testing & Polish | `NOT STARTED` | 5% |
 | E-9 | Final Verification & Submission | `NOT STARTED` | 3% |
 
-**Progres berbobot: 30%** = E-0 (10%) + E-1 (10%) + E-2 (10%). E-2a **bukan** fase berbobot
-(0%) — ia checkpoint Git di dalam E-2. E-3…E-9 (total 70%) tetap `NOT STARTED`.
+**Progres berbobot: 72%** = E-0 (10%) + E-1 (10%) + E-2 (10%) + E-3 (12%) + E-4 (12%) +
+E-5 (18%). E-2a **bukan** fase berbobot (0%) — ia checkpoint Git di dalam E-2. E-6…E-9
+(total 28%) tetap `NOT STARTED`.
 
 ### 3.2 Artifact readiness
 
@@ -107,14 +110,14 @@ Angka "direncanakan" berasal dari dokumen yang sudah disetujui, bukan estimasi.
 | Artefak | Terbangun | Direncanakan | Sumber |
 | --- | --- | --- | --- |
 | Dokumen proyek | **8** | 8 | `README.md` §Documentation map |
-| Halaman / route UI | **0** | 13 | `docs/design-solution.md` §3 |
-| Route handler API | **0** | 16 | `docs/api-contract.md` |
-| Tabel database | **0** | 7 | `docs/database-design.md` §2 |
-| SQL function | **0** | 4 | `docs/database-design.md` §5 |
+| Halaman / route UI | **7** | 13 | `docs/design-solution.md` §3 |
+| Route handler API | **4** | 16 | `docs/api-contract.md` |
+| Tabel database | **7** | 7 | `docs/database-design.md` §2 |
+| SQL function | **5** | 5 | `docs/database-design.md` §5 |
 | Integration eksternal | **0** | 1 | `docs/technical-decisions.md` ADR-8 |
 | Workflow n8n | **0** | 1 | `docs/technical-decisions.md` ADR-9 |
-| Acceptance criteria verified | **0** | 42 | `docs/mvp-scope.md` §6 |
-| Test (unit + integration + E2E) | **11 unit** (1 file) | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
+| Acceptance criteria verified | **31 / 42** (27 penuh + 4 database-scope; 11 pending E-6/E-7) | 42 | `docs/mvp-scope.md` §6 |
+| Test (unit + integration + E2E) | **95 unit** (7 file) + **85 integration** (8 file) + smoke 27/27; E2E manual M1–M4 user-attested | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
 | Deployment demo | **0** | 1 | di luar cakupan dokumen |
 | File foundation aplikasi | **25** | 25 | di-commit pada `7ed8371` |
 | Dependency terpasang | **17** | 17 | `package.json` / `package-lock.json` |
@@ -397,6 +400,33 @@ katalog · RTL/component test.
   `GET /api/orders/[token]`, `/orders/[token]`, `/mock-gateway/[ref]`. E-6 memakai fondasi yang
   sudah ada: `requireAdmin()` + `src/proxy.ts` + RLS `is_admin()` (E-3) + `createAdminClient()`.
   E-6 **tidak** perlu mengubah skema, RPC, atau kontrak E-5. E-3 tetap `CLOSED`.
+- **Penyempurnaan pasca-penutupan (2026-11-27, 3 commit):** seluruhnya di atas `220517c`,
+  sudah diverifikasi, dan tidak mengubah API/DB/RPC. E-5 tetap `CLOSED`.
+  - **Checkout Validation UX** — `src/modules/orders/schemas.ts` memakai pesan customer-friendly
+    dan constraint yang sama untuk client/server; `checkout-form.tsx` menjalankan
+    `checkoutRequestSchema` sebelum request, menampilkan error per field, dan memisahkan input
+    telepon (`+` tetap). Test: 30 test schema; gate lint/typecheck/unit PASS.
+  - **Checkout Session Reuse & Storage Fallback** — modul baru `src/modules/orders/checkout-key.ts`
+    (138 baris) mengelola satu key per checkout attempt: retry memakai key yang sama, 409 melepas
+    key, key dilepas setelah navigasi sukses. `sessionStorage` gagal/blocked → fallback `Map`
+    in-memory selama page load. Test: 18 test. Kontrak: `docs/api-contract.md` §6.
+  - **GAP-1 — Mock Gateway settle → payment verify** — pengujian E2E manual menemukan UI tidak
+    pernah memanggil `POST /api/payments/verify` setelah gateway mencatat outcome, sehingga
+    order/payment tetap `pending`. Diperbaiki dengan **1 file** (client component
+    `mock-gateway-controls.tsx`): gateway kini memanggil verify setelah settle, dengan penanganan
+    200 / 409 `PAYMENT_ALREADY_FINAL` / 404 / 5xx-network; outcome tetap dibaca backend dari
+    `mock_gateway_transactions`. Verifikasi: T1 success → paid · T2 failed → failed · T3 pending →
+    tetap pending · T4 refresh stabil · T5 pengulangan → 409 + outcome pertama berlaku, tanpa
+    payment/outbox ganda · T6 ref lintas order → 404 · T7 smoke regresi **27/27** · T8 integritas
+    DB semua 0.
+- **Verifikasi final pasca-penutupan (2026-11-27):** unit **95/95** (7 file) · lint 0 ·
+  typecheck 0 · production build **PASS** (12 route) · smoke HTTP **27/27** · DB integrity
+  **7×0** · working tree sebelum commit **8 path** (6 modified + 2 untracked), staged 0.
+  Bukti M1–M4: **PASS berdasarkan konfirmasi user (user-attested)**; tidak ada artefak
+  berlabel, screenshot, atau laporan Playwright — Playwright dijadwalkan E-8.
+- **Keputusan AC-9 (2026-11-27):** target 96 unit test adalah estimasi, bukan syarat wajib.
+  Permission eksplisit menyatakan target “disesuaikan dengan jumlah test aktual”; hasil akhir
+  **95/95 PASS** diterima dan tidak ada test yang ditambahkan hanya untuk mengejar angka 96.
 - **References:** `docs/api-contract.md` §4.3–§4.6, §6 · `docs/database-design.md` §5.1–§5.2 ·
   `docs/mvp-scope.md` §6.1–§6.2, §6.4 · `docs/technical-decisions.md` ADR-5, ADR-6, ADR-7, ADR-10
 
@@ -536,6 +566,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-25 | Sumber gambar eksternal (Wikimedia Commons) dapat membalas **HTTP 429** secara intermiten (`retry-after: 600`, rate limit per-IP) | Medium | **Diterima — risiko eksternal** (2026-11-27) | — | Mitigasi: A″ (`deviceSizes`/`imageSizes` dipersempit, `minimumCacheTTL` 86400) + fallback `onError` yang terverifikasi. **Risiko tidak dihilangkan** |
 | KI-26 | NFR9 contrast ratio belum diaudit terukur (≥ 4.5:1) | Low | **`DEFERRED` — post-MVP** (2026-11-27) | — | Ukur saat polish; token warna sudah ditetapkan di `src/app/globals.css` |
 | KI-27 | NFR9 keyboard baru diuji pada **homepage** (header, CTA, skip-to-content, focus indicator); halaman katalog dan detail paket belum dikonfirmasi | Low | **Terbuka** (2026-11-27) | — | Uji keyboard pada `/destinations` serta detail destinasi/paket sebelum mengklaim NFR9 untuk seluruh storefront |
+| KI-28 | **GAP-1**: UI tidak memanggil `POST /api/payments/verify` setelah gateway mencatat outcome → order/payment tetap `pending` | Medium | **Resolved** (2026-11-27) | — | Ditutup dengan 1 file (`mock-gateway-controls.tsx`): settle → verify → redirect; T1–T8 lulus |
 
 Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum ditemukan.
 
@@ -605,6 +636,10 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-27 | E-5 implementasi + verifikasi lokal: checkout/payment/order flow, 3 API + 3 halaman, 27 unit test baru, smoke HTTP 27/27, gate hijau; `KI-24` ditutup; **belum di-commit** | `VERIFIED` |
 | 2026-11-27 | E-5 tiga commit lokal: `5fc02d6` feat (19 file), `5565b5b` test (3), `220517c` docs (3) | `VERIFIED` |
 | 2026-11-27 | E-5 penutupan + push: `dcbd315..220517c` fast-forward ke `origin/main` (tanpa force); status → `CLOSED`; progres 5/10 (60%) | `CLOSED` |
+| 2026-11-27 | GAP-1 (pasca-penutupan): UI tidak memanggil `POST /api/payments/verify`; diperbaiki di `mock-gateway-controls.tsx` (1 file). Verifikasi T1–T6 + smoke 27/27 + integritas DB 0 pelanggaran. E-5 tetap `CLOSED` | `RESOLVED` |
+| 2026-11-27 | Checkout Validation UX: schema pesan customer-friendly, validasi client/server, 30 test schema; unit 95/95, lint/typecheck PASS | `VERIFIED` |
+| 2026-11-27 | Checkout Session Reuse + Storage Fallback: modul `checkout-key.ts`, 18 test, fallback in-memory, kontrak §6 diperbarui | `VERIFIED` |
+| 2026-11-27 | E-5 final verification pasca-penutupan: production build PASS (12 route) · 95/95 unit (7 file) · smoke 27/27 · DB 7×0 · M1–M4 user-attested · AC-9 target 96 disesuaikan → 95/95; 8 path di-commit (`9cd350d`, `d429ce7`, + commit dokumentasi) | `CLOSED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:
