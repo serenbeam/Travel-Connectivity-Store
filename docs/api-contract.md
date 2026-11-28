@@ -353,11 +353,22 @@ interpolates the value into an `or=(…)` expression, it selects one column and 
       "customerName": "Budi Santoso", "customerEmail": "budi@example.com",
       "destinationName": "Japan", "packageName": "Japan 5 GB · 15 days",
       "totalIdr": 145000, "status": "paid", "paymentStatus": "succeeded",
-      "notificationStatus": "sent" }
+      "notificationStatus": "sent", "canResendNotification": false }
   ],
   "nextCursor": "MjAyNi0xMS0yOFQwMzoxMTowMlp8OGQ3…"
 }
 ```
+
+`canResendNotification` is **advisory UI state**, computed server-side from the outbox row with
+the same rule the resend endpoint enforces: `false` when the order is not `paid`, when the
+notification is already `sent`, while a claim still holds its 120 s lease, at the 5-attempt
+ceiling, or when no outbox row exists. The list never returns the outbox `attempts` counter or
+its `locked_at` token.
+
+The flag is **not** a promise that a resend will succeed: `POST …/notification/resend` re-reads
+the state, answers `202 skipped` / `409 NOTIFICATION_IN_FLIGHT` / `409 NOTIFICATION_CLAIM_STALE`
+as documented in §5.6, and `claim_outbox` remains the final authority. A stale list page can
+therefore show a button whose click is then skipped.
 
 `nextCursor: null` on the last page.
 
@@ -430,6 +441,48 @@ internal order UUID, payment UUID, or any database credential.
 Delivery semantics: **at-least-once**. `notificationId` is stable across resends so a
 receiver can deduplicate. Exactly-once is not offered. HTTP timeout 10 s, one retry inside
 the claim, lease 120 s.
+
+### 7.1 Stored payload vs wire payload
+
+The `notification_outbox.payload` column (written by `settle_payment` in the settlement
+transaction) holds nine keys: `notificationId`, `orderNumber`, `customerName`,
+`customerEmail`, `destinationName`, `packageName`, `packageDataSnapshot`, `totalIdr`,
+`paidAt`. The dispatcher validates that object with a strict schema and adds
+`"event": "order.paid"` at send time — the event name is not stored, so a future second
+event type needs no migration. A payload with an unexpected key is rejected instead of
+forwarded, which is what keeps capability material out of the webhook body.
+
+### 7.2 What `sent` means
+
+`notification_outbox.status = 'sent'` means: **n8n answered 2xx**, and the n8n workflow
+answered only after its SMTP node reported that the provider accepted the message.
+
+It is **not** proof that the email reached an inbox, was delivered, or was read. Provider
+acceptance, delivery, and read receipts are separate things; this system observes only the
+first one, plus its own webhook call.
+
+### 7.3 Failure classification (dispatcher)
+
+| Result | Recorded | Retry |
+| --- | --- | --- |
+| `2xx` | `status = 'sent'`, `sent_at` set | — |
+| `4xx` (bad secret, rejected event) | `status = 'failed'`, `last_error = n8n_http_<status>` | **no** (permanent) |
+| `5xx` | `status = 'failed'`, `last_error = n8n_http_<status>` | one retry inside the claim, then failed |
+| timeout / network error | `status = 'failed'`, `last_error = n8n_timeout` / `n8n_network` | one retry inside the claim, then failed |
+| payload invalid or unreadable | `status = 'failed'`, `last_error = invalid_payload` / `payload_unavailable` | no send attempted |
+| claim lost to a newer attempt (`finish_outbox` → `stale`) | nothing is overwritten | — |
+
+A failure here never touches `orders` or `payments`: a paid order stays paid. `attempts` is
+bumped by each claim and is capped at 5 by the schema; a row at the ceiling is terminal for
+dispatch, and the documented operator runbook (ADR-9) is the only way back. The resend
+endpoint never resets `attempts`.
+
+### 7.4 Duplicates are possible
+
+A timeout after the provider accepted the message, or a crash between the HTTP call and
+`finish_outbox`, produces a repeat delivery after the lease expires. That is accepted:
+`notificationId` is stable across retries so the receiver can deduplicate, and **no** claim is
+made that a duplicate email is impossible.
 
 ## 8. Status code summary
 
