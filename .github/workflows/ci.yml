@@ -1,0 +1,58 @@
+name: CI
+
+# Minimum verification for the MVP: lint, types, unit tests, and a production build.
+# Integration tests (need a local Supabase stack + Docker) and Playwright (E-8) are
+# deliberately out of scope for this workflow.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same ref cancels the older run: same checks, no wasted minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the workflow only reads the repository.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # PUBLIC placeholders, not credentials. `next build` renders /admin, and
+      # src/lib/env.public.ts validates these three values (lazily) at that moment, so a
+      # build without them fails. They are inlined into the bundle by Next.js, which is
+      # why the CI build is a compile check and never a deployable artifact.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.invalid
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key-000000
+      NEXT_PUBLIC_APP_URL: https://ci-placeholder.invalid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Deterministic install from package-lock.json.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
