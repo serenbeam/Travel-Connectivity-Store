@@ -16,6 +16,8 @@ export type ErrorCode =
   | 'PAYMENT_ALREADY_FINAL'
   | 'PACKAGE_INACTIVE'
   | 'DESTINATION_IN_USE'
+  | 'PACKAGE_IN_USE'
+  | 'UNIQUE_VIOLATION'
   | 'NOTIFICATION_IN_FLIGHT'
   | 'NOTIFICATION_CLAIM_STALE'
   | 'NOTIFICATION_DELIVERY_FAILED'
@@ -34,6 +36,8 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   PAYMENT_ALREADY_FINAL: 409,
   PACKAGE_INACTIVE: 409,
   DESTINATION_IN_USE: 409,
+  PACKAGE_IN_USE: 409,
+  UNIQUE_VIOLATION: 409,
   NOTIFICATION_IN_FLIGHT: 409,
   NOTIFICATION_CLAIM_STALE: 409,
   NOTIFICATION_DELIVERY_FAILED: 502,
@@ -72,6 +76,29 @@ export function jsonError(
 /** Uniform 404 for capability-token routes: identical body for every miss. */
 export function jsonNotFound(): NextResponse<ApiErrorBody> {
   return jsonError('NOT_FOUND', 'Not found.');
+}
+
+/** 204 responses must not carry a body, so this cannot reuse {@link jsonOk}. */
+export function jsonNoContent(): NextResponse {
+  return new NextResponse(null, { status: 204, headers: NO_STORE });
+}
+
+export interface FieldIssueDetail {
+  field: string;
+  message: string;
+}
+
+/**
+ * Zod issues -> the `details` array of a 422 body. Structurally typed so this module stays
+ * free of a Zod import; the paths of a validated object are strings or numbers.
+ */
+export function validationDetails(
+  issues: ReadonlyArray<{ path: ReadonlyArray<PropertyKey>; message: string }>,
+): FieldIssueDetail[] {
+  return issues.map((issue) => ({
+    field: issue.path.map(String).join('.'),
+    message: issue.message,
+  }));
 }
 
 /** Default ceiling for Supabase calls made from route handlers / server modules. */
