@@ -62,25 +62,27 @@ Aturan tambahan:
 
 | Field | Nilai |
 | --- | --- |
-| Fase terakhir selesai | **E-7 n8n & Outbox — `CLOSED`** (2026-11-28; MVP scope, known limitations accepted) |
-| Fase aktif | **E-7 n8n & Outbox — `CLOSED`** · berikutnya E-8 (belum dimulai) |
+| Fase terakhir selesai | **E-8 Testing & Polish — `CLOSED`** (2026-11-28; all verification gates passed) |
+| Fase aktif | **E-8 Testing & Polish — `CLOSED`** · berikutnya E-9 (`NOT STARTED`) |
 | Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · E-5: `5fc02d6`, `5565b5b`, `220517c` (ter-push) · pasca-penutupan: `9cd350d`, `d429ce7`, + commit dokumentasi ini (2026-11-27) · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
-| Fase selesai | **8 / 10 (80%)** + 1 checkpoint tanpa bobot (E-2a) |
-| Acceptance criteria terverifikasi | **42 / 42 tercatat** = 37 penuh + 2 database-scope (T7, T11) + 3 parsial (A1, E2 → E-8; T12 → jalur HTTP `409 NOTIFICATION_IN_FLIGHT` belum diuji, sedangkan `in_flight` di modul sudah PASS di unit+integration) · **0 pending** |
+| Fase selesai | **9 / 10 (90%)** + 1 checkpoint tanpa bobot (E-2a) |
+| Acceptance criteria terverifikasi | **42 / 42 tercatat** = 38 penuh + 2 database-scope (T7, T11) + 2 parsial (E2 → `KI-40`, diputuskan post-MVP; T12 → jalur HTTP `409 NOTIFICATION_IN_FLIGHT` belum diuji, sedangkan `in_flight` di modul sudah PASS di unit+integration) · **0 pending** · A1 naik ke **Verified** lewat E2E admin E-8 |
 | Kode aplikasi | **96 file** di `src/**` (`.ts`/`.tsx`): 90 sebelum E-7, 6 ditambahkan E-7 (4 modul automation, 1 route resend, 1 komponen Resend) |
 | Migration | **6** (`supabase/migrations/`) |
-| Test dijalankan | **227 unit** (16 file, PASS) + **95 integration** (10 file, PASS) + build PASS (26 route) + lint 0/0 + typecheck 0 · JSON workflow valid · Code node statis 24/24 · **MT-1 PASS · MT-2A PASS · MT-6 PASS** (manual, Mailpit lokal) · MT-2B/MT-3/MT-4 ditunda |
-| Browser E2E | **M1–M4 PASS (user-attested)**; tidak ada artefak berlabel, screenshot, atau laporan Playwright (E-8) |
+| Test dijalankan | **227 unit** (16 file, PASS) + **95 integration** (10 file, PASS) + **3 Playwright** (2 flow, PASS pada **dua run berturut-turut**) + build PASS (26 route) + lint 0/0 + typecheck 0 · JSON workflow valid · Code node statis 24/24 · **MT-1 PASS · MT-2A PASS · MT-6 PASS** (manual, Mailpit lokal) · MT-2B/MT-3/MT-4 ditunda |
+| Browser E2E | **PASS (Playwright 1.65.1, Chromium)** — 3 test / 2 flow, dua run berturut-turut (24.9 s lalu 21.7 s): customer `destinations → package → checkout → simulated success → order paid` (order `RML-HYEX0T` + `RML-4R7EUW`, keduanya `paid`, `Rp 89.000`, harga dihitung server) · admin `wrong password → login → create → edit price → delete` (fixture `e2e-fixture-*` dihapus, **0 sisa** pada kedua run) · mobile 390×844 tanpa horizontal overflow |
 | Deployment | **belum dikonfigurasi** |
-| Blocker terbuka | **0 blocker E-7** (fase `CLOSED`, MVP scope). Sisa bukan blocker: MT-2B/MT-3/MT-4 (failure-path manual), prosedur import (`KI-42`), email publik belum diuji |
-| Persetujuan yang ditunggu | **commit/push E-7** · MT-2B/MT-3/MT-4 menunggu persetujuan terpisah (tidak menghalangi closure) |
+| Blocker terbuka | **0 blocker E-8** (fase `CLOSED`). Sisa bukan blocker: MT-2B/MT-3/MT-4 (failure-path manual), prosedur import (`KI-42`), email publik belum diuji, dan item P2 post-MVP (`KI-26`, `KI-27`, `KI-31`, `KI-32`, `KI-38`, `KI-40`). **Catatan operasional:** Docker Desktop + stack Supabase lokal dihentikan secara normal (`npx supabase stop`) bila tidak digunakan; dua order E2E tetap tersimpan di DB lokal |
+| Persetujuan yang ditunggu | **commit/push E-8** · MT-2B/MT-3/MT-4 menunggu persetujuan terpisah (tidak menghalangi closure E-8 yang sudah disetujui) |
 
-Ringkasan satu kalimat: **E-6 dan E-7 `CLOSED`** — E-7 (n8n & Outbox) ditutup dengan **MVP scope,
-known limitations accepted**: dispatcher outbox→n8n, `after()` pada verify, endpoint resend + tombol
-admin, payload Zod, workflow n8n WIB deterministik; **227 unit + 95 integration PASS**, lint 0/0,
-typecheck 0, build 26 route; **MT-1/MT-2A/MT-6 PASS**; MT-2B/MT-3/MT-4 deferred dan T12 parsial
-dicatat; 0 migration/dependency/env; belum ada commit/push (HEAD `8b755b1`).**
+Ringkasan satu kalimat: **E-6, E-7, dan E-8 `CLOSED`** — E-7 (n8n & Outbox) ditutup dengan **MVP
+scope, known limitations accepted**; **E-8 (Testing & Polish) `CLOSED — All Verification Gates
+Passed (2026-11-28)`**: **227 unit + 95 integration + 3 Playwright (2 flow, dua run berturut-turut)
+PASS**, lint 0/0, typecheck 0, build 26 route + Proxy; `KI-39` Resolved, `KI-40` tetap HOLD/post-MVP,
+`KI-43`/`KI-44` diterima untuk MVP; order E2E `RML-HYEX0T` dan `RML-4R7EUW` `paid`; 0 migration,
+1 devDependency (`@playwright/test`), 0 perubahan `src/**`, 0 perubahan CI/env; belum ada
+commit/push (HEAD `d384e2c` + perubahan E-8 di working tree).**
 
 ---
 
@@ -98,12 +100,12 @@ dicatat; 0 migration/dependency/env; belum ada commit/push (HEAD `8b755b1`).**
 | E-5 | Checkout, Payment & Idempotency | `CLOSED` | 18% |
 | E-6 | Admin CMS | `CLOSED` | 12% |
 | E-7 | n8n & Outbox | `CLOSED` | 8% |
-| E-8 | Testing & Polish | `NOT STARTED` | 5% |
+| E-8 | Testing & Polish | `CLOSED` | 5% |
 | E-9 | Final Verification & Submission | `NOT STARTED` | 3% |
 
-**Progres berbobot: 92%** = E-0 (10%) + E-1 (10%) + E-2 (10%) + E-3 (12%) + E-4 (12%) +
-E-5 (18%) + E-6 (12%) + E-7 (8%). E-2a **bukan** fase berbobot (0%) — ia checkpoint Git di dalam E-2.
-E-8…E-9 (total 8%) tetap `NOT STARTED`.
+**Progres berbobot: 97%** = E-0 (10%) + E-1 (10%) + E-2 (10%) + E-3 (12%) + E-4 (12%) +
+E-5 (18%) + E-6 (12%) + E-7 (8%) + E-8 (5%). E-2a **bukan** fase berbobot (0%) — ia checkpoint
+Git di dalam E-2. E-8 **`CLOSED`** (2026-11-28); E-9 tetap `NOT STARTED` (3% belum ditambahkan).
 
 ### 3.2 Artifact readiness
 
@@ -556,22 +558,25 @@ katalog · RTL/component test.
 - **References:** `docs/technical-decisions.md` ADR-9 · `docs/database-design.md` §2.6, §5.3–§5.4 ·
   `docs/api-contract.md` §5.6, §7 · `docs/mvp-scope.md` §6.4 · `src/modules/automation/*`
 
-### E-8 — Testing & Polish — `NOT STARTED`
+### E-8 — Testing & Polish — `CLOSED`
+
+**CLOSED — All Verification Gates Passed (2026-11-28)** · MVP scope, known limitations accepted.
 
 - **Objective:** Seluruh aturan bisnis berisiko terbukti lulus dan UI rapi di tiga breakpoint.
 - **Tasks:**
-  - [ ] Vitest unit lengkap
-  - [ ] Vitest integration lengkap (constraint, idempotency, RLS, outbox)
-  - [ ] Playwright 2 flow utama
-  - [ ] Manual pass responsive 375 / 768 / 1280
-  - [ ] Verifikasi acceptance criteria (target: seluruh 42)
-  - [ ] Aksesibilitas dasar (fokus, kontras, keyboard)
-- **Status:** `NOT STARTED`
-- **Verification result:** Belum ada. Bukti yang diperlukan: output test + tabel AC terisi.
-- **Blockers / risks:** `KI-10` waktu; cut-line diterapkan bila slip > 3 jam (E2E flow 2 →
-  manual + screenshot, integration RLS diringkas ke 3 assertion).
-- **Completion date:** —
-- **References:** `docs/mvp-scope.md` §6, §8 · `docs/technical-decisions.md` ADR-11
+  - [x] Vitest unit lengkap — **227/227 PASS** (16 file), tidak ada test lama diubah
+  - [x] Vitest integration lengkap (constraint, idempotency, RLS, outbox) — **95/95 PASS** (10 file) pada stack lokal `travelConnectivityStore`
+  - [x] Playwright 2 flow utama — `tests/e2e/customer-checkout.spec.ts` + `tests/e2e/admin-package.spec.ts`, **3/3 PASS**
+  - [x] Assertion responsive otomatis terbatas — guest checkout 390×844: `scrollWidth - clientWidth = 0`, tombol Pay ≥ 44 px dan berada di dalam viewport
+  - [ ] Manual pass responsive 375 / 768 / 1280 — **belum** dijalankan penuh (hanya 390×844 otomatis + inspeksi kelas CSS)
+  - [ ] Verifikasi acceptance criteria (target: seluruh 42) — AC-A1 kini **Verified** lewat E2E; AC-E2 tetap parsial (`KI-40`); sisanya tidak berubah
+  - [ ] Aksesibilitas dasar (fokus, kontras, keyboard) — `KI-26`/`KI-27` tetap **post-MVP** (keputusan pemilik)
+- **Status:** `CLOSED` (2026-11-28) — seluruh gate verifikasi lulus; item yang tidak dikerjakan dicatat eksplisit sebagai post-MVP/HOLD di bawah
+- **Verification result:** (2026-11-28) lint **0/0** · typecheck **0** · unit **227/227** · integration **95/95** · Playwright **3/3 pada dua run berturut-turut** (24.9 s lalu 21.7 s) · build **26 route + Proxy**. E2E customer menghasilkan order `RML-HYEX0T` dan `RML-4R7EUW` (keduanya `paid`, total `89000`, harga dari server) tanpa mengekspos capability token; E2E admin memverifikasi pesan gagal generik, create, edit harga `Rp 123.000 → Rp 130.000`, lalu menghapus **hanya** fixture `e2e-fixture-*` (query DB: **0 sisa** pada kedua run). Login gagal tercatat sebagai `admin login rejected {"reason":"invalid_credentials"}` (tanpa email/password).
+- **Blockers / risks:** `KI-10` waktu · E2E memerlukan Docker + stack lokal + `MOCK_GATEWAY_ENABLED=true` · setiap run customer menambah satu baris `orders` permanen (`KI-44`) · trace retry memuat capability URL dan hanya tersimpan lokal (`test-results/`, gitignored).
+- **Catatan operasional:** Docker Desktop + stack Supabase lokal dihentikan secara normal (`npx supabase stop`) bila tidak digunakan. **Jangan** menjalankan `db reset`, menghapus volume, atau menghapus dua order E2E — keduanya adalah bukti pengujian E-8.
+- **Completion date:** 2026-11-28
+- **References:** `docs/mvp-scope.md` §6, §8 · `docs/technical-decisions.md` ADR-11 · `playwright.config.ts`
 
 ### E-9 — Final Verification & Submission — `NOT STARTED`
 
@@ -629,6 +634,8 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-23 | 2026-11-26 | `orders.package_data_snapshot` (turunan deterministik), kardinalitas order→payment **at most one**, pencarian admin **exact match** | Approved (desain) | DB §1, §2.2, §2.3 · API §5.4 |
 | DL-29 | 2026-11-28 | Pencarian admin memakai **parser bentuk tertutup** (`RML-[A-Z0-9]{6}` atau email) lalu satu `.eq(kolom, nilai)`; tidak ada `or=()` dari teks user. Cursor keyset divalidasi ulang (ISO instant + UUID) sebelum interpolasi. | Implemented + Verified (unit) | `src/modules/orders/admin-search.ts` · `src/lib/admin-list.ts` · `tests/unit/admin-search.test.ts`, `tests/unit/admin-list.test.ts` |
 | DL-30 | 2026-11-28 | Seluruh baca/tulis CMS memakai **client authenticated** (RLS `is_admin()`), bukan service role; service role hanya dipakai jalur guest/E-5 yang sudah ada | Implemented | `src/modules/catalog/admin-{queries,mutations}.ts` · `src/modules/{orders,payments}/admin-queries.ts` |
+| DL-31 | 2026-11-28 | **E-8 lean scope**: 1 E2E customer + 1 E2E admin + 1 assertion mobile, tanpa memperluas CI, tanpa migration, tanpa refactor `src/**`; `@playwright/test@1.65.1` dipin sebagai devDependency (sama dengan versi di README) | Approved + Implemented | `playwright.config.ts` · `tests/e2e/**` · `package.json` |
+| DL-32 | 2026-11-28 | Fixture admin E2E direplikasi (`tests/e2e/support/admin-fixture.ts` + `support/env.ts`) daripada mengimpor helper integration, karena batas `server-only` dan perbedaan modul ESM/CJS; guard local-stack (loopback, port 54421) dipertahankan | Implemented + Verified | `tests/e2e/global-setup.ts` · `KI-43` |
 
 ---
 
@@ -666,10 +673,14 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-36 | `GET /api/admin/destinations` dan `GET /api/admin/packages` menjawab `405` tanpa sesi (resolusi method Next sebelum handler); tidak membocorkan data — list memang bukan endpoint | Low | **Diterima** (2026-11-28) | — | Tanpa aksi; kontrak §5 hanya mendefinisikan mutasi + list order/payment |
 | KI-37 | Satu pasangan fixture non-aktif (`fk-ord-dest-*`/`fk-ord-pkg-*`) dari run uji pertama tetap ada karena order-nya permanen (deferred I2 trigger + `ON DELETE RESTRICT`) | Low | **Diterima** (2026-11-28) | — | Tidak memengaruhi katalog aktif (5/15) maupun AC; fixture baru memakai slug tetap `admin-fixture-*` |
 | KI-38 | `enrich` memperlakukan `error: true` dari upstream sebagai `404`, bukan `503 ENRICHMENT_UNAVAILABLE` | Low | **Diterima** (2026-11-28) | E-8 | Semantik tidak ideal, tidak menghambat AC-E1; diperbaiki bersama uji jalur `503` |
-| KI-39 | **AC-A1 parsial:** login admin dengan akun seed terbukti (sesi nyata `role=admin`), tetapi interaksi form login di browser (submit, pesan error generik, logout) belum diuji otomatis | Low | **Terbuka — E-8** | — | Playwright 2 flow (admin login + package management) di E-8 |
-| KI-40 | **AC-E2 parsial:** jalur `503 ENRICHMENT_UNAVAILABLE` ada dan form tetap dapat disubmit manual, tetapi kegagalan upstream belum dipaksa secara langsung | Low | **Terbuka — E-8** | — | Uji dengan upstream diblokir (DevTools/offline) di E-8 |
+| KI-39 | **AC-A1 parsial:** login admin dengan akun seed terbukti (sesi nyata `role=admin`), tetapi interaksi form login di browser (submit, pesan error generik, logout) belum diuji otomatis | Low | **Resolved** (2026-11-28) | — | Ditutup E-8: E2E admin menguji submit dengan kredensial salah → `Wrong email or password.` (satu pesan generik, tanpa probing akun), lalu login fixture `admin@roamly.test` → `/admin` + heading `Overview`. Logout belum diuji E2E (bukan bagian flow) |
+| KI-40 | **AC-E2 parsial:** jalur `503 ENRICHMENT_UNAVAILABLE` ada dan form tetap dapat disubmit manual, tetapi kegagalan upstream belum dipaksa secara langsung | Low | **HOLD — post-MVP** (2026-11-28) | — | Keputusan pemilik: tidak dikerjakan di E-8 (butuh mock upstream). `KI-38` (semantik `error: true`) juga tetap post-MVP dan ikut ditangani bersama uji jalur `503` nanti |
 | KI-41 | **Demo email manual**: kredensial SMTP test mailbox + instance n8n | Medium | **Verified (local Mailpit)** (2026-11-28) | — | MT-1 PASS: 1 email di Mailpit dengan `notificationId` = outbox id. **Bukan** bukti email publik/inbox. MT-4 (SMTP sengaja gagal) tetap HOLD |
 | KI-42 | Import `n8n/order-paid-email.json` ke instance n8n nyata tidak diuji; node type version dapat perlu penyesuaian | Low | **Partially resolved** (2026-11-28) | — | Workflow disinkronkan lewat **UI + Publish** (bukan import ulang) dan diverifikasi: `activeVersionId` = draft = hash `8da22812c27cf81b`. Prosedur import tetap belum diuji |
+| KI-43 | Fixture admin E2E **tidak** memakai `ensureAdminUser()` dari integration suite: rantai import `auth.ts → clients.ts → src/lib/supabase/admin.ts` diawali `import 'server-only'` (hanya bisa di-alias oleh `vitest.config.integration.ts`), dan `tests/integration/support/env.ts` memakai `import.meta` yang gagal di CJS Playwright | Low | **Diterima untuk MVP** (2026-11-28) | — | Fixture ditulis ulang di `tests/e2e/support/admin-fixture.ts` + `support/env.ts` dengan guard yang sama (loopback + port 54421, tolak DB remote, tolak konflik env). Duplikasi ~60 baris; alternatifnya mengubah `tsconfig`/module app, di luar scope E-8 |
+| KI-44 | Setiap run E2E customer menambah satu baris `orders` **permanen** di DB lokal (tidak ada grant delete, tanpa cleanup job); trace retry Playwright memuat capability URL order yang dikunjungi | Low | **Diterima — known limitation** (2026-11-28) | — | DB lokal adalah data demo; `test-results/`/`playwright-report/` gitignored dan tidak boleh dibagikan. Order hasil run E-8: **`RML-HYEX0T`** (run 1) dan **`RML-4R7EUW`** (run 2), keduanya `paid`; keduanya adalah bukti pengujian E-8 dan tidak boleh dihapus |
+| KI-45 | `/admin/packages` memuat seluruh katalog tanpa paginasi (order/payment berpaginasi 10) | Low | **Diterima — post-MVP** (2026-11-28) | — | Katalog MVP 15 paket; paginasi katalog bukan kebutuhan demo. Tidak diubah di E-8 |
+| KI-46 | Drift dokumentasi terdeteksi di E-8: `README.md` menyebut 205 unit test (aktual 227) dan `AGENTS.md`/`README.md` mencantumkan `npm run test:e2e` sebelum script-nya ada | Low | **Resolved** (2026-11-28) | — | README (jumlah test, prasyarat E2E) + `AGENTS.md` (komentar perintah) disinkronkan; `test:e2e` sekarang benar-benar ada di `package.json` |
 
 Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum ditemukan.
 
@@ -701,7 +712,7 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | NA-20 | Putuskan kanal notifikasi n8n (`KI-04`/NA-04) sebelum E-7 | NA-19 | **Selesai** 2026-11-28 — kanal **email via SMTP n8n** |
 | NA-22 | Demo email manual: siapkan SMTP test mailbox + workflow n8n, lalu jalankan alur checkout→paid→email dan uji jalur gagal | NA-20 | **Selesai sebagian** 2026-11-28: MT-1/MT-2A/MT-6 PASS; MT-2B/MT-3/MT-4 ditunda |
 | NA-23 | Final review E-7 (closure) | NA-22 | **Selesai** 2026-11-28 — E-7 `CLOSED` (MVP scope, known limitations accepted); MT-2B/3/4 tetap deferred |
-| NA-21 | E-8: Playwright 2 flow (login admin + package management, checkout→paid), uji jalur `503` enrich, keyboard/kontras (`KI-26`, `KI-27`), drawer sidebar (`KI-32`), `Previous` keyset (`KI-31`), `KI-38` | NA-19 | **Ya (fase terpisah)** |
+| NA-21 | E-8: Playwright 2 flow (login admin + package management, checkout→paid), uji jalur `503` enrich, keyboard/kontras (`KI-26`, `KI-27`), drawer sidebar (`KI-32`), `Previous` keyset (`KI-31`), `KI-38` | NA-19 | **Sebagian selesai** 2026-11-28: 2 flow Playwright PASS (`KI-39` Resolved) + assertion mobile 390×844; **`KI-40`/`KI-38` (`503` enrich), `KI-26`, `KI-27`, `KI-31`, `KI-32` tetap HOLD/post-MVP** sesuai keputusan pemilik |
 
 Urutan yang disarankan: **NA-10** (push manual) → **NA-11** (mulai E-5 Analysis/Proposal) → implementasi E-5 hanya setelah proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
 persetujuan terpisah — tanpa izin tersebut, `AGENTS.md` dan `docs/design-solution.md` tidak
@@ -773,6 +784,10 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-28 | **MT-2A PASS** (invalid Header Auth → 403, 0 eksekusi/0 email/0 perubahan DB) · **MT-2B SKIPPED** (butuh perubahan env/restart atau file test sementara; aturan 4xx-tanpa-retry sudah diuji unit) | `VERIFIED` |
 | 2026-11-28 | **MT-6 PASS** (resend pada notifikasi `sent` → `202 skipped`; `attempts` tetap 3, `sent_at` tidak berubah, 0 eksekusi, 0 email) | `VERIFIED` |
 | 2026-11-28 | Final verification E-7 (read-only): source/DB/n8n/docs PASS · unit **227/227** · integration **95/95** (evidence) · n8n published = draft = `8da22812c27cf81b` · `KI-41` → Verified (local Mailpit), `KI-42` → Partially resolved; MT-2B/MT-3/MT-4 deferred. E-7 tetap `IN PROGRESS` menunggu keputusan closure | `VERIFIED` |
+| 2026-11-28 | **E-8 implementasi**: `@playwright/test@1.65.1` (devDependency, Chromium 1255) + `playwright.config.ts` (chromium, 1 worker, `reuseExistingServer`, `trace: on-first-retry`) + `tests/e2e/{customer-checkout,admin-package}.spec.ts` + `tests/e2e/{global-setup.ts,support/{env,admin-fixture,storefront}.ts}` + script `test:e2e`. 0 migration, 0 perubahan `src/**`, 0 perubahan CI/env | `IMPLEMENTED` |
+| 2026-11-28 | **E-8 verifikasi**: Playwright **3/3 PASS** (24.9 s) · integration **95/95 PASS** · unit **227/227** · lint 0/0 · typecheck 0 · build **26 route + Proxy** · order `RML-HYEX0T` `paid` (`Rp 89.000`, harga server) · fixture admin dihapus (DB: 0 `e2e-fixture-%`) · mobile 390×844 overflow 0 · 0 secret di output klien. Dua kegagalan awal = bug test (nama berisi digit; route-announcer `role=alert`), bukan bug aplikasi | `VERIFIED` |
+| 2026-11-28 | Tracker & dokumen disinkronkan: `KI-39` → Resolved, `KI-40`/`KI-38`/`KI-26`/`KI-27`/`KI-31`/`KI-32` tetap post-MVP, `KI-43`–`KI-46` dicatat, `KI-46` (drift README/AGENTS) Resolved; E-8 tetap `IN PROGRESS` menunggu persetujuan closure + commit/push terpisah | `IN PROGRESS` |
+| 2026-11-28 | **E-8 `CLOSED` — All Verification Gates Passed**: unit **227/227** · integration **95/95** · Playwright **3/3 dua run berturut-turut** · lint 0/0 · typecheck 0 · build **26 route + Proxy**; order bukti `RML-HYEX0T` + `RML-4R7EUW` (`paid`); fixture admin **0 sisa**; `KI-39` Resolved · `KI-43`/`KI-44` diterima untuk MVP · `KI-40` **HOLD/post-MVP**; E-7 tidak berubah; progres berbobot **97%**, E-9 tersisa. Belum di-commit/di-push | `CLOSED` |
 | 2026-11-28 | **E-7 `CLOSED`** — keputusan pemilik: MVP scope, known limitations accepted. MT-1/MT-2A/MT-6 PASS · MT-2B SKIPPED · MT-3 manual tidak diuji (unit coverage) · MT-4 HOLD · Final Verification PASS · T12 jalur HTTP 409 parsial. Penutupan **bukan** pernyataan seluruh failure-path production telah diuji; 7 known limitations dipertahankan. Belum di-commit/di-push | `CLOSED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya

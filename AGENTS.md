@@ -13,7 +13,7 @@ Status: `Approved` (documentation phase). Application code does not exist yet.
 3. Keep the change inside the approved scope. New scope needs a new proposal.
 4. Update documentation in the same change when behaviour, constraints, or contracts move.
 
-## Commands (approved, to be added with the implementation)
+## Commands (approved)
 
 ```bash
 npm run dev            # Next.js dev server
@@ -21,7 +21,7 @@ npm run build          # production build
 npm run lint           # lint
 npm run test           # Vitest unit
 npm run test:int       # Vitest integration (needs `npx supabase start`)
-npm run test:e2e       # Playwright
+npm run test:e2e       # Playwright (needs `npx supabase start` + `MOCK_GATEWAY_ENABLED=true`)
 npx supabase start     # local Postgres + Auth (Docker)
 npx supabase db reset  # apply migrations + seed
 ```

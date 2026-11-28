@@ -8,8 +8,8 @@ minimal admin CMS, built as a Next.js **modular monolith** on Supabase.
 | Layer | Status |
 | --- | --- |
 | Product & technical design (this documentation set) | **Approved** — 26 Nov 2026 |
-| Application code, migrations, tests | **Partial** — E-3 schema/RLS/SQL functions, the E-4 storefront, the E-5 checkout/payment/order flow, the E-6 admin CMS, and the E-7 notification dispatcher (outbox → n8n) exist; the email demo needs the owner's SMTP credential, and Playwright is pending (E-8) |
-| Automated test suite | **Partial** — 205 unit tests + 95 integration tests; Playwright pending (E-8). Integration tests need a local Supabase stack and are **not** run by CI |
+| Application code, migrations, tests | **Partial** — E-3 schema/RLS/SQL functions, the E-4 storefront, the E-5 checkout/payment/order flow, the E-6 admin CMS, the E-7 notification dispatcher (outbox → n8n), and the two E-8 Playwright flows exist; the email demo needs the owner's SMTP credential |
+| Automated test suite | **Verified locally** — 227 unit tests + 95 integration tests + 3 Playwright tests covering the 2 documented E2E flows. Integration and E2E need a local Supabase stack and are **not** run by CI |
 | Deployment | **Not configured** |
 
 Nothing in this repository has been executed yet. Every document describes the approved
@@ -157,7 +157,7 @@ npm run start      # production server
 npm run lint       # lint
 npm run test       # Vitest (unit)
 npm run test:int   # Vitest (integration, requires local Supabase)
-npm run test:e2e   # Playwright
+npm run test:e2e   # Playwright (requires local Supabase + the dev server)
 ```
 
 ## Testing
@@ -166,9 +166,28 @@ npm run test:e2e   # Playwright
   redaction, order status transitions, outbox claim guards, payload minimisation.
 - **Vitest integration** — against a disposable local Supabase instance: unique
   constraints, idempotency under concurrency, RLS/authorization, outbox claim fencing.
-- **Playwright** — two flows only: guest checkout to simulated success, and admin login
-  plus package management.
-- Responsive layout and visual quality are checked manually.
+- **Playwright** — two flows only, three tests
+  (`tests/e2e/customer-checkout.spec.ts`, `tests/e2e/admin-package.spec.ts`): guest checkout to
+  simulated success, and admin login plus package management; plus one 390×844
+  no-horizontal-overflow assertion on the guest checkout form.
+- Responsive layout and visual quality are otherwise checked manually.
+
+### Running the E2E suite
+
+1. `npx supabase start` (Docker; do not reset unless you mean to wipe local data).
+2. `.env.local` must exist with `MOCK_GATEWAY_ENABLED=true`, otherwise the simulated payment
+   page returns 404. The dev server is started by Playwright itself and reused if it is
+   already listening on `http://localhost:3000`.
+3. `npm run test:e2e`.
+
+Notes: the admin fixture (`admin@roamly.test`, role in `app_metadata`) is created or repaired
+by `tests/e2e/global-setup.ts` through the Auth Admin API using `.env.test`; the fixture
+reads `.env.test` because Playwright cannot import the Vitest env helper (ESM `import.meta`)
+or `src/lib/supabase/admin.ts` (`server-only`). The admin flow creates one uniquely-named
+package and deletes only that package at the end. The customer flow leaves one real `orders`
+row behind — orders have no delete path by design — so the local database accumulates demo
+orders. Traces are written on the first retry and contain the capability URL of the order
+they visited: `test-results/` is gitignored and must never be shared.
 
 Details and the case list: [`docs/mvp-scope.md`](docs/mvp-scope.md) and
 [`docs/technical-decisions.md`](docs/technical-decisions.md).
