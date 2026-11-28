@@ -62,24 +62,25 @@ Aturan tambahan:
 
 | Field | Nilai |
 | --- | --- |
-| Fase terakhir selesai | **E-6 Admin CMS — `CLOSED`** (2026-11-28; implementasi + verifikasi berlapis; 2 AC parsial dialihkan ke E-8) |
-| Fase aktif | **E-6 Admin CMS — `CLOSED`** · berikutnya E-7 (belum dimulai, menunggu keputusan kanal `KI-04`) |
+| Fase terakhir selesai | **E-7 n8n & Outbox — `CLOSED`** (2026-11-28; MVP scope, known limitations accepted) |
+| Fase aktif | **E-7 n8n & Outbox — `CLOSED`** · berikutnya E-8 (belum dimulai) |
 | Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · E-5: `5fc02d6`, `5565b5b`, `220517c` (ter-push) · pasca-penutupan: `9cd350d`, `d429ce7`, + commit dokumentasi ini (2026-11-27) · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
-| Fase selesai | **7 / 10 (70%)** + 1 checkpoint tanpa bobot (E-2a) |
-| Acceptance criteria terverifikasi | **38 / 42** = 34 penuh + 4 database-scope · 2 parsial (A1, E2 → E-8) · 2 pending (T12, T14 → E-7). Sisa database-scope: T7, T10, T11, T15 |
-| Kode aplikasi | **90 file** di `src/**` (`.ts`/`.tsx`): 53 sebelum E-6, 37 ditambahkan E-6 (13 halaman/action admin, 7 route handler admin, 9 modul/lib, 7 komponen, 1 guard) |
+| Fase selesai | **8 / 10 (80%)** + 1 checkpoint tanpa bobot (E-2a) |
+| Acceptance criteria terverifikasi | **42 / 42 tercatat** = 37 penuh + 2 database-scope (T7, T11) + 3 parsial (A1, E2 → E-8; T12 → jalur HTTP `409 NOTIFICATION_IN_FLIGHT` belum diuji, sedangkan `in_flight` di modul sudah PASS di unit+integration) · **0 pending** |
+| Kode aplikasi | **96 file** di `src/**` (`.ts`/`.tsx`): 90 sebelum E-7, 6 ditambahkan E-7 (4 modul automation, 1 route resend, 1 komponen Resend) |
 | Migration | **6** (`supabase/migrations/`) |
-| Test dijalankan | **167 unit** (12 file, PASS) + **88 integration** (9 file, PASS) + walkthrough HTTP ber-sesi nyata + pagination orders 3 halaman/30 unik tanpa overlap & payments 2 halaman tanpa overlap · production build PASS (26 route) · lint 0/0 · typecheck 0 |
+| Test dijalankan | **227 unit** (16 file, PASS) + **95 integration** (10 file, PASS) + build PASS (26 route) + lint 0/0 + typecheck 0 · JSON workflow valid · Code node statis 24/24 · **MT-1 PASS · MT-2A PASS · MT-6 PASS** (manual, Mailpit lokal) · MT-2B/MT-3/MT-4 ditunda |
 | Browser E2E | **M1–M4 PASS (user-attested)**; tidak ada artefak berlabel, screenshot, atau laporan Playwright (E-8) |
 | Deployment | **belum dikonfigurasi** |
-| Blocker terbuka | **0 untuk E-6** (`KI-35` Resolved 2026-11-28) · 1 project-level (`KI-04`, milik E-7) |
-| Persetujuan yang ditunggu | tidak ada untuk E-6 · **keputusan kanal notifikasi (`KI-04`/NA-04)** dibutuhkan sebelum E-7 · commit/push E-6 belum dijalankan |
+| Blocker terbuka | **0 blocker E-7** (fase `CLOSED`, MVP scope). Sisa bukan blocker: MT-2B/MT-3/MT-4 (failure-path manual), prosedur import (`KI-42`), email publik belum diuji |
+| Persetujuan yang ditunggu | **commit/push E-7** · MT-2B/MT-3/MT-4 menunggu persetujuan terpisah (tidak menghalangi closure) |
 
-Ringkasan satu kalimat: **E-6 admin CMS `CLOSED` (2026-11-28)** — 43 file baru + 5 file diubah,
-0 migration, 0 dependency baru, `KI-35` diperbaiki lalu terverifikasi (167 unit, 88 integration,
-pagination 3 halaman tanpa overlap, build 26 route); AC-A1 dan AC-E2 tetap `Partially Verified`
-dan dijadwalkan pada E-8; belum di-commit/di-push, dan E-7 belum dimulai.**
+Ringkasan satu kalimat: **E-6 dan E-7 `CLOSED`** — E-7 (n8n & Outbox) ditutup dengan **MVP scope,
+known limitations accepted**: dispatcher outbox→n8n, `after()` pada verify, endpoint resend + tombol
+admin, payload Zod, workflow n8n WIB deterministik; **227 unit + 95 integration PASS**, lint 0/0,
+typecheck 0, build 26 route; **MT-1/MT-2A/MT-6 PASS**; MT-2B/MT-3/MT-4 deferred dan T12 parsial
+dicatat; 0 migration/dependency/env; belum ada commit/push (HEAD `8b755b1`).**
 
 ---
 
@@ -96,13 +97,13 @@ dan dijadwalkan pada E-8; belum di-commit/di-push, dan E-7 belum dimulai.**
 | E-4 | Storefront & Seed | `CLOSED` | 12% |
 | E-5 | Checkout, Payment & Idempotency | `CLOSED` | 18% |
 | E-6 | Admin CMS | `CLOSED` | 12% |
-| E-7 | n8n & Outbox | `NOT STARTED` | 8% |
+| E-7 | n8n & Outbox | `CLOSED` | 8% |
 | E-8 | Testing & Polish | `NOT STARTED` | 5% |
 | E-9 | Final Verification & Submission | `NOT STARTED` | 3% |
 
-**Progres berbobot: 84%** = E-0 (10%) + E-1 (10%) + E-2 (10%) + E-3 (12%) + E-4 (12%) +
-E-5 (18%) + E-6 (12%). E-2a **bukan** fase berbobot (0%) — ia checkpoint Git di dalam E-2.
-E-7…E-9 (total 16%) tetap `NOT STARTED`.
+**Progres berbobot: 92%** = E-0 (10%) + E-1 (10%) + E-2 (10%) + E-3 (12%) + E-4 (12%) +
+E-5 (18%) + E-6 (12%) + E-7 (8%). E-2a **bukan** fase berbobot (0%) — ia checkpoint Git di dalam E-2.
+E-8…E-9 (total 8%) tetap `NOT STARTED`.
 
 ### 3.2 Artifact readiness
 
@@ -116,9 +117,9 @@ Angka "direncanakan" berasal dari dokumen yang sudah disetujui, bukan estimasi.
 | Tabel database | **7** | 7 | `docs/database-design.md` §2 |
 | SQL function | **5** | 5 | `docs/database-design.md` §5 |
 | Integration eksternal | **1** | 1 | `docs/technical-decisions.md` ADR-8 (`countriesnow.space`, admin enrich) |
-| Workflow n8n | **0** | 1 | `docs/technical-decisions.md` ADR-9 |
-| Acceptance criteria verified | **38 / 42** (34 penuh + 4 database-scope) + 2 parsial (A1, E2 → E-8) + 2 pending (T12, T14 → E-7) | 42 | `docs/mvp-scope.md` §6 |
-| Test (unit + integration + E2E) | **167 unit** (12 file) + **88 integration** (9 file) + smoke HTTP 27/27 + pagination 3 halaman/30 unik (orders) & 2 halaman (payments); E2E manual M1–M4 user-attested | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
+| Workflow n8n | **1** | 1 | `docs/technical-decisions.md` ADR-9 · artefak `n8n/order-paid-email.json` |
+| Acceptance criteria verified | **37 penuh + 2 database-scope** (T7, T11) + 3 parsial (A1, E2, T12) / 42 | 42 | `docs/mvp-scope.md` §6 |
+| Test (unit + integration + E2E) | **214 unit** (15 file) + **95 integration** (10 file) + smoke HTTP 27/27 + pagination 3 halaman/30 unik & 2 halaman; E2E manual M1–M4 user-attested | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
 | Deployment demo | **0** | 1 | di luar cakupan dokumen |
 | File foundation aplikasi | **25** | 25 | di-commit pada `7ed8371` |
 | Dependency terpasang | **17** | 17 | `package.json` / `package-lock.json` |
@@ -495,25 +496,65 @@ katalog · RTL/component test.
 - **References:** `docs/api-contract.md` §5 · `docs/mvp-scope.md` §6.3 · `AGENTS.md` §Forbidden patterns ·
   `src/modules/auth/guard.ts` · `src/lib/admin-list.ts` · `src/modules/orders/admin-search.ts`
 
-### E-7 — n8n & Outbox — `NOT STARTED`
+### E-7 — n8n & Outbox — `CLOSED`
 
 - **Objective:** Notifikasi order-paid terkirim melalui satu workflow n8n, dengan dispatch
   yang aman terhadap konkurensi dan kegagalan.
 - **Tasks:**
-  - [ ] Workflow n8n: webhook + verifikasi `X-Webhook-Secret` + kirim pesan
-  - [ ] `dispatchOutbox` (claim → kirim → finish) dengan timeout 10 s, retry 1×
-  - [ ] Pemanggilan `after()` pada jalur verify
-  - [ ] Aksi admin "Resend notification"
-  - [ ] Integration test claim paralel + fencing (`stale`)
-  - [ ] Bukti: screenshot/JSON notifikasi terkirim
-- **Status:** `NOT STARTED`
-- **Verification result:** Belum ada. Bukti yang diperlukan: 2 dispatch bersamaan = 1 kirim;
-  `finish_outbox` stale tidak mengubah row; payload memuat `notificationId` dan tanpa token.
-- **Blockers / risks:** `KI-04` kanal pengiriman n8n belum dipilih (asumsi A4) · `KI-06`
-  at-least-once diterima.
-- **Completion date:** —
+  - [x] Workflow n8n (artefak `n8n/order-paid-email.json`): webhook + Header Auth `X-Webhook-Secret` + compose + SMTP
+  - [x] `dispatchForOrder` (claim → payload → kirim → fenced finish), timeout 10 s, retry 1× (transient saja)
+  - [x] Pemanggilan `after()` pada jalur verify (hanya setelah `settled`, orderId internal)
+  - [x] Aksi admin "Resend notification" (endpoint §5.6 + tombol di daftar order)
+  - [x] Integration test dispatch paralel, kegagalan, ceiling, payload invalid, resend guard
+  - [x] **A2** — `canResendNotification` dihitung server (`resendEligibility`), tombol Resend mengikuti aturan backend
+  - [x] **B1** — format WIB deterministik (UTC+7, tanpa `Intl`/`toLocaleString`/ICU) di Code node n8n
+  - [x] Bukti email terkirim — **MT-1 PASS** (Mailpit lokal): 1 email, subject `Roamly order RML-6FDC6C confirmed`, `Rp 145.000`, `28 Nov 2026, 18:03 WIB`, `Reference` = outbox id
+- **Status:** `CLOSED` (2026-11-28) — **MVP scope, known limitations accepted**.
+  Kode `CODE COMPLETE — HAPPY PATH VERIFIED`; penutupan disetujui pemilik dengan catatan bahwa
+  fase ini **bukan** pernyataan bahwa seluruh failure-path production telah diuji.
+- **Closure notes (2026-11-28, keputusan pemilik):** MT-1 **PASS** · MT-2A **PASS** ·
+  MT-2B **SKIPPED/DEFERRED** · MT-3 **tidak diuji manual** (unit coverage tersedia) ·
+  MT-4 **HOLD/DEFERRED** · MT-6 **PASS** · Final Verification **PASS**. Penerimaan ini berlaku
+  untuk kebutuhan MVP dan demonstrasi; batas cakupan (MT-2B, MT-3 manual, MT-4, dan jalur HTTP
+  `409 NOTIFICATION_IN_FLIGHT` pada T12) tetap tercatat dan **tidak** dinaikkan menjadi PASS.
+- **Verification result (2026-11-28, benar-benar dijalankan):**
+  - `npm run test` **227/227 PASS** (16 file; 167 pra-E-7 + 60 baru: `automation-payload` 8,
+    `automation-n8n-client` 12, `automation-dispatch` 27, `n8n-workflow` 13).
+  - `npm run test:int` **95/95 PASS** (10 file; 88 pra-E-7 + `notification-dispatch` 7).
+  - `lint` 0/0 · `typecheck` 0 · `build` PASS (26 route).
+  - Bukti integrasi: settlement sukses → outbox → dispatch `sent` (`attempts=1`, `sent_at` terisi);
+    2 dispatch paralel = **1 kirim** (`none` untuk yang kalah); n8n gagal → outbox `failed`
+    `last_error=n8n_http_503` **dan order tetap `paid`**; resend `already_sent`/`in_flight`/
+    `max_attempts` tanpa pengiriman; payload invalid setelah claim di-finish `invalid_payload`
+    (tidak tertinggal `processing`); `locked_at` diteruskan verbatim (string, bukan Date).
+  - **A2:** `resendEligibility()` menjadi satu-satunya aturan (dipakai endpoint + daftar admin);
+    unit test membuktikan order belum paid, `sent`, lease aktif, lease kedaluwarsa, attempts tepat 5,
+    dan relasi null; `attempts`/`locked_at` **tidak** diekspos di response, hanya boolean.
+  - **B1:** workflow JSON valid; Code node dieksekusi statis dengan `$input` tiruan — **24/24 PASS**
+    (WIB normal, rollover hari/bulan/tahun, kabisat, penolakan `paidAt` non-kanonik, event salah,
+    field kosong, `orderNumber`/`totalIdr` invalid, escaping HTML, tanpa `Intl`/`toLocaleString`).
+  - 0 migration · 0 perubahan RPC/trigger/constraint/RLS/grant · 0 dependency · 0 env baru.
+- **Final verification (MT, 2026-11-28) — kode `CODE COMPLETE — HAPPY PATH VERIFIED`:**
+  | Test | Hasil | Bukti |
+  | --- | --- | --- |
+  | **MT-1** happy path | **PASS** | order `RML-6FDC6C` `paid` · payment `succeeded` · outbox `sent` (`attempts=3`) · 1 eksekusi n8n `success` pada versi `4dd2ba94` · 1 email Mailpit, konten 13/13 PASS |
+  | **MT-2A** invalid Header Auth | **PASS** | production URL + secret salah → **403** `Authorization data is wrong!`; 0 eksekusi, 0 email, 0 perubahan DB |
+  | **MT-2B** backend secret mismatch | **SKIPPED** | butuh ubah `.env.local`/restart duakali atau file test sementara → di luar batas; aturan 4xx-tanpa-retry sudah diuji unit (`automation-n8n-client` “stops at the first 4xx”) |
+  | **MT-3** invalid payload | **NOT MANUALLY TESTED** | validasi payload diuji unit (13 kasus `n8n-workflow`) + `automation-payload`; jalur HTTP belum dijalankan manual |
+  | **MT-4** SMTP failure | **HOLD** | tidak dijalankan (butuh SMTP sengaja salah); kegagalan-notifikasi-tidak-mengubah-order dibuktikan MT-1 (500) + integration test |
+  | **MT-6** duplicate resend protection | **PASS** | resend pada order `sent` → **202** `{"status":"skipped","reason":"none_claimable"}`; `attempts` tetap 3, `sent_at` identik, 0 eksekusi, 0 email |
+  | Final verification (source/DB/n8n/docs) | **PASS** | strict payload + wire event; `claim_outbox`/`finish_outbox` grants hanya `service_role` dan **0** write grant tabel; 1 workflow `active`, published = draft = hash `8da22812`, 0 credential tertanam; dokumentasi menyebut at-least-once & `after()` bukan queue |
+- **Known limitations (E-7):** (1) delivery **at-least-once**, bukan exactly-once; (2) `after()` bukan
+  durable queue; (3) `sent` = provider/SMTP **accepted**, bukan inbox delivery; (4) `attempts` maksimum
+  **5** (baris di ceiling = terminal untuk dispatch, pemulihan lewat runbook operator); (5) **tidak ada**
+  scheduler/backoff otomatis — retry hanya 1× dalam claim + resend admin; (6) **MT-2B dan MT-4 belum
+  diverifikasi manual**; (7) Mailpit adalah SMTP lokal — **bukan** bukti pengiriman email publik.
+- **Blockers / risks:** tidak ada blocker kode. `KI-41` **Verified (local Mailpit)**; `KI-42`
+  **Partially resolved** (prosedur import tidak diuji; sinkronisasi via UI + Publish diverifikasi lewat
+  `activeVersionId`/`workflowVersionId`). `KI-06` at-least-once/duplikat diterima dan didokumentasikan.
+- **Completion date:** 2026-11-28
 - **References:** `docs/technical-decisions.md` ADR-9 · `docs/database-design.md` §2.6, §5.3–§5.4 ·
-  `docs/api-contract.md` §5.6, §7 · `docs/mvp-scope.md` §6.4
+  `docs/api-contract.md` §5.6, §7 · `docs/mvp-scope.md` §6.4 · `src/modules/automation/*`
 
 ### E-8 — Testing & Polish — `NOT STARTED`
 
@@ -598,7 +639,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-01 | Aset destinasi: lima foto yang dipakai **approved for MVP use**; seleksi aset final ditunda | Low | **Diterima untuk MVP** (2026-11-27) | — | Final asset selection = post-MVP; atribusi tetap tampil di halaman detail destinasi |
 | KI-02 | Supabase CLI belum terpasang (Docker 29.9.2 tersedia) | Medium | **Resolved** (2026-11-27) | — | CLI 3.4.0 dijalankan via `npx`; belum dipin sebagai devDependency (keputusan terpisah) |
 | KI-03 | Dependency di-install | Medium | **Resolved** (2026-11-26) | — | 397 paket terpasang, lockfile v3, commit `7ed8371` |
-| KI-04 | Kanal pengiriman n8n belum dipilih (asumsi A4) | Low | Terbuka | E-7 | Putuskan SMTP/chat sink |
+| KI-04 | Kanal pengiriman n8n belum dipilih (asumsi A4) | Low | **Resolved** (2026-11-28) | — | Keputusan pemilik: **email** dikirim oleh n8n via node SMTP; tidak ada kanal lain di MVP |
 | KI-05 | Order `pending` tanpa auto-expiry | Low | Diterima | — | Terdokumentasi di README §Limitations |
 | KI-06 | Notifikasi at-least-once, duplikat mungkin | Low | Diterima | — | `notificationId` untuk dedup penerima |
 | KI-07 | Access log infrastruktur mencatat path capability | Low | Diterima | — | Mitigasi header + 0 third-party (ADR-10) |
@@ -627,6 +668,8 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-38 | `enrich` memperlakukan `error: true` dari upstream sebagai `404`, bukan `503 ENRICHMENT_UNAVAILABLE` | Low | **Diterima** (2026-11-28) | E-8 | Semantik tidak ideal, tidak menghambat AC-E1; diperbaiki bersama uji jalur `503` |
 | KI-39 | **AC-A1 parsial:** login admin dengan akun seed terbukti (sesi nyata `role=admin`), tetapi interaksi form login di browser (submit, pesan error generik, logout) belum diuji otomatis | Low | **Terbuka — E-8** | — | Playwright 2 flow (admin login + package management) di E-8 |
 | KI-40 | **AC-E2 parsial:** jalur `503 ENRICHMENT_UNAVAILABLE` ada dan form tetap dapat disubmit manual, tetapi kegagalan upstream belum dipaksa secara langsung | Low | **Terbuka — E-8** | — | Uji dengan upstream diblokir (DevTools/offline) di E-8 |
+| KI-41 | **Demo email manual**: kredensial SMTP test mailbox + instance n8n | Medium | **Verified (local Mailpit)** (2026-11-28) | — | MT-1 PASS: 1 email di Mailpit dengan `notificationId` = outbox id. **Bukan** bukti email publik/inbox. MT-4 (SMTP sengaja gagal) tetap HOLD |
+| KI-42 | Import `n8n/order-paid-email.json` ke instance n8n nyata tidak diuji; node type version dapat perlu penyesuaian | Low | **Partially resolved** (2026-11-28) | — | Workflow disinkronkan lewat **UI + Publish** (bukan import ulang) dan diverifikasi: `activeVersionId` = draft = hash `8da22812c27cf81b`. Prosedur import tetap belum diuji |
 
 Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum ditemukan.
 
@@ -655,7 +698,9 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | NA-17 | Perbaiki **`KI-35`** (cursor offset `+00:00`): terima `±HH:MM` + kutip nilai saat menyusun filter, tambah unit test | NA-16 | **Selesai** 2026-11-28 (`PERM-FIX-1`, 4 file) |
 | NA-18 | Verifikasi ulang halaman 2 (API + UI) setelah `KI-35` diperbaiki, lalu ajukan closure review E-6 | NA-17 | **Selesai** 2026-11-28 (orders 3 halaman/30 unik, payments 2 halaman, tanpa overlap) |
 | NA-19 | E-6 dinyatakan **`CLOSED`** setelah final review (AC-A1 & AC-E2 tetap parsial → E-8) | NA-18 | **Selesai** 2026-11-28 |
-| NA-20 | Putuskan kanal notifikasi n8n (`KI-04`/NA-04) sebelum E-7 | NA-19 | **Ya (pemilik proyek)** |
+| NA-20 | Putuskan kanal notifikasi n8n (`KI-04`/NA-04) sebelum E-7 | NA-19 | **Selesai** 2026-11-28 — kanal **email via SMTP n8n** |
+| NA-22 | Demo email manual: siapkan SMTP test mailbox + workflow n8n, lalu jalankan alur checkout→paid→email dan uji jalur gagal | NA-20 | **Selesai sebagian** 2026-11-28: MT-1/MT-2A/MT-6 PASS; MT-2B/MT-3/MT-4 ditunda |
+| NA-23 | Final review E-7 (closure) | NA-22 | **Selesai** 2026-11-28 — E-7 `CLOSED` (MVP scope, known limitations accepted); MT-2B/3/4 tetap deferred |
 | NA-21 | E-8: Playwright 2 flow (login admin + package management, checkout→paid), uji jalur `503` enrich, keyboard/kontras (`KI-26`, `KI-27`), drawer sidebar (`KI-32`), `Previous` keyset (`KI-31`), `KI-38` | NA-19 | **Ya (fase terpisah)** |
 
 Urutan yang disarankan: **NA-10** (push manual) → **NA-11** (mulai E-5 Analysis/Proposal) → implementasi E-5 hanya setelah proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
@@ -671,7 +716,7 @@ tidak diubah, tidak dihapus, dan menunggu workflow analisis + izin implementasi 
 | --- | --- | --- | --- |
 | Admin route & API | 10 route handler admin di `docs/api-contract.md` §5 (`/api/admin/**`) | E-6 | **Keluar dari HOLD 2026-11-28** (`IMPLEMENTED`): 7 route (10 method) + `adminGuard()`; verifikasi HTTP penuh menunggu `KI-33` |
 | UI admin | `/admin/login`, overview, CRUD destinasi/paket, daftar order & payment, keyset pagination 10 baris | E-6 | **Keluar dari HOLD 2026-11-28** (`IMPLEMENTED`): 6 halaman + 4 halaman form/detail; login & CRUD nyata menunggu `KI-33` |
-| Notifikasi & n8n | Dispatcher (`after()`), `claim_outbox`/`finish_outbox` di kode, webhook + `X-Webhook-Secret`, retry 10 s | E-7 | RPC + sweep tersedia; dispatcher, workflow n8n, dan kanal (KI-04) belum dipilih |
+| Notifikasi & n8n | Dispatcher (`after()`), `claim_outbox`/`finish_outbox` di kode, webhook + `X-Webhook-Secret`, retry 10 s | E-7 | **Keluar dari HOLD 2026-11-28** (`IMPLEMENTED` + test otomatis `VERIFIED`): modul `automation/*`, endpoint resend, tombol Resend, `n8n/order-paid-email.json`; demo email menunggu SMTP (`KI-41`) |
 | AC fase berikutnya | A1–A7 · T12, T14 · E1, E2 | E-6/E-7 | **E-6 keluar dari HOLD 2026-11-28** (`CLOSED`): A2/A3/A4/A5/A6/A7 + E1 **Verified**; A1 & E2 tetap **Partially Verified** → E-8 (`KI-39`, `KI-40`); T12/T14 tetap milik E-7 |
 | 4 AC database-scope | T7, T10, T11, T15 | E-7 | Paruh database sudah `Verified (database scope)`; paruh HTTP/delivery belum. **Jangan** dinaikkan menjadi `Verified` penuh |
 
@@ -718,6 +763,17 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-28 | **`KI-35` Resolved** (`PERM-FIX-1`, 4 file: `admin-list.ts`, 2 admin query, 1 unit test): `±HH:MM` diterima & dinormalkan, filter dikutip. Bukti: unit **167/167**, orders **3 halaman/30 unik/overlap 0**, payments **2 halaman/overlap 0**, UI halaman 2 tanpa alert, `test:int` **88/88**, build **26 route**, lint 0/0, typecheck 0 | `VERIFIED` |
 | 2026-11-28 | Tracker disinkronkan: AC-A5 & NFR3 → **Verified**; `KI-20`/`KI-29`/`KI-30`/`KI-33`/`KI-35` → **Resolved**; `KI-36`…`KI-40` dicatat (P3 + dua AC parsial); baseline hash dokumen diperbarui; artifact readiness `13/13` halaman, `13/16` handler, AC `38/42` | `VERIFIED` |
 | 2026-11-28 | **E-6 `CLOSED`** setelah final review: 0 P0/P1 terbuka, AC E-6 yang dapat diuji terbukti, dokumen sinkron; 2 AC parsial (A1, E2) dialihkan ke E-8; belum di-commit/di-push | `CLOSED` |
+| 2026-11-28 | CI GitHub Actions ditambahkan (`.github/workflows/ci.yml`, commit `8b755b1`, run `46114301880` **success**, 46 s) | `CLOSED` |
+| 2026-11-28 | **E-7 implementasi**: 5 modul/route baru (`automation/{payload,n8n.client,dispatch,outbox-queries}`, endpoint resend), tombol Resend di admin, `after()` pada verify, `orderId` internal pada `PaymentContext`, artefak `n8n/order-paid-email.json`, docs §7 + README. 0 migration, 0 dependency, 0 env baru | `IMPLEMENTED` |
+| 2026-11-28 | **E-7 verifikasi otomatis**: unit **205/205** (15 file) · integration **95/95** (10 file) · lint 0/0 · typecheck 0 · build PASS 26 route. Bukti: 1 order → 1 kirim · 2 dispatch paralel = 1 kirim · n8n gagal → outbox `failed`, **order tetap paid** · resend `already_sent`/`in_flight`/`max_attempts` · payload invalid di-finish `invalid_payload` | `VERIFIED` |
+| 2026-11-28 | E-7 status `IN PROGRESS`: demo email manual + import workflow n8n belum dapat dijalankan tanpa kredensial SMTP/instance n8n (`KI-41`, `KI-42`); belum di-commit/di-push | `IN PROGRESS` |
+| 2026-11-28 | **E-7 Final Fix (A2 + B1)** disetujui & diimplementasikan: `canResendNotification` dihitung server (`resendEligibility` dipakai endpoint + daftar admin) · format WIB deterministik UTC+7 tanpa `Intl` pada Code node n8n · docs §5.4 + README disinkronkan. Bukti: unit **214/214**, integration **95/95**, lint 0/0, typecheck 0, build 26 route, JSON valid, eksekusi statis Code node **24/24**; 0 migration/dependency/env | `CODE COMPLETE` |
+| 2026-11-28 | Tracker disinkronkan dengan hasil A2 + B1; status kode E-7 = `CODE COMPLETE — PENDING MANUAL INTEGRATION VERIFICATION`; `KI-41`/`KI-42` tetap terbuka; HEAD `8b755b1`, belum di-commit/di-push | `IN PROGRESS` |
+| 2026-11-28 | **MT-1 PASS** (end-to-end): order `RML-6FDC6C` `paid`, payment `succeeded`, outbox `sent` (`attempts=3`), 1 eksekusi n8n `success` (versi `4dd2ba94`), 1 email Mailpit dengan `Reference` = outbox id, `Rp 145.000`, `28 Nov 2026, 18:03 WIB` | `VERIFIED` |
+| 2026-11-28 | **MT-2A PASS** (invalid Header Auth → 403, 0 eksekusi/0 email/0 perubahan DB) · **MT-2B SKIPPED** (butuh perubahan env/restart atau file test sementara; aturan 4xx-tanpa-retry sudah diuji unit) | `VERIFIED` |
+| 2026-11-28 | **MT-6 PASS** (resend pada notifikasi `sent` → `202 skipped`; `attempts` tetap 3, `sent_at` tidak berubah, 0 eksekusi, 0 email) | `VERIFIED` |
+| 2026-11-28 | Final verification E-7 (read-only): source/DB/n8n/docs PASS · unit **227/227** · integration **95/95** (evidence) · n8n published = draft = `8da22812c27cf81b` · `KI-41` → Verified (local Mailpit), `KI-42` → Partially resolved; MT-2B/MT-3/MT-4 deferred. E-7 tetap `IN PROGRESS` menunggu keputusan closure | `VERIFIED` |
+| 2026-11-28 | **E-7 `CLOSED`** — keputusan pemilik: MVP scope, known limitations accepted. MT-1/MT-2A/MT-6 PASS · MT-2B SKIPPED · MT-3 manual tidak diuji (unit coverage) · MT-4 HOLD · Final Verification PASS · T12 jalur HTTP 409 parsial. Penutupan **bukan** pernyataan seluruh failure-path production telah diuji; 7 known limitations dipertahankan. Belum di-commit/di-push | `CLOSED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:
