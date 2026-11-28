@@ -1,6 +1,6 @@
 # API Contract
 
-Status: `Approved`. Route handlers: **not implemented yet**.
+Status: `Approved`. Implemented: public endpoints (E-5) and admin endpoints (E-6).
 
 Authority for endpoints, payloads, headers, and error codes. Data shapes and constraints
 live in [`database-design.md`](database-design.md); the rules behind them in
@@ -49,6 +49,8 @@ handlers, and therefore are not part of this contract.
 | 409 | `PAYMENT_ALREADY_FINAL` | settle/verify on a payment that is already `succeeded`/`failed` |
 | 409 | `PACKAGE_INACTIVE` | checkout for a deactivated package |
 | 409 | `DESTINATION_IN_USE` | delete destination that still has packages |
+| 409 | `PACKAGE_IN_USE` | delete package that is referenced by an order |
+| 409 | `UNIQUE_VIOLATION` | create/update that collides with an existing unique value (catalog slug, country code, `(destination_id, slug)`) |
 | 409 | `NOTIFICATION_IN_FLIGHT` | resend while the row is `processing` within its lease |
 | 409 | `NOTIFICATION_CLAIM_STALE` | `finish_outbox` fencing rejected the caller |
 | 422 | `VALIDATION_ERROR` | Zod failure |
@@ -253,7 +255,16 @@ outcome → `422`.
 ## 5. Admin endpoints
 
 All require a valid Supabase session with `app_metadata.role === 'admin'`, enforced by
-`requireAdmin()` in the handler (and `proxy.ts` for page navigation). Failures: `401`, `403`.
+`adminGuard()` in the handler (and the `(dashboard)` layout for pages; `proxy.ts` is only an
+early session gate). Failures: `401` without a session, `403` when the session exists but
+`app_metadata.role !== 'admin'`. Authorization is evaluated **before** the request body or path
+parameter is read.
+
+Catalog **lists** for the CMS are not endpoints: they are Server Components that read through
+the authenticated client so RLS `is_admin()` stays the enforcing layer. Only mutations and the
+order/payment lists are route handlers.
+
+A path `id` that is not a UUID answers `400 BAD_REQUEST` ("unparsable param").
 
 ### 5.1 Destinations
 
@@ -269,9 +280,12 @@ All require a valid Supabase session with `app_metadata.role === 'admin'`, enfor
 }
 ```
 
-`201` with the created row. `409` on duplicate `slug`/`countryCode`, `422` on validation.
+`201` with the created row (`{ "data": { …row } }`). `409 UNIQUE_VIOLATION` on a duplicate
+`slug` or `countryCode`, `422 VALIDATION_ERROR` on validation (field-level `details`).
 
-`PATCH /api/admin/destinations/[id]` — partial body, same field names. `200`.
+`PATCH /api/admin/destinations/[id]` — partial body, same field names; at least one field is
+required (`422` otherwise). `200` with the updated row; `404` when the row does not exist;
+`409 UNIQUE_VIOLATION` on a collision.
 `DELETE /api/admin/destinations/[id]` — `204`; `409 DESTINATION_IN_USE` when packages exist.
 
 ### 5.2 Packages
@@ -287,11 +301,16 @@ All require a valid Supabase session with `app_metadata.role === 'admin'`, enfor
 }
 ```
 
-`201`. `422` for `validityDays` outside 1..90, negative price, `compareAt` ≤ `price`,
-`dataMb` missing when `isUnlimited` is false. `409` on duplicate `(destinationId, slug)`.
+`201` with the created row (`{ "data": { …row } }`). `422 VALIDATION_ERROR` for
+`validityDays` outside 1..90, a non-positive price, `compareAt` ≤ `price`, `dataMb` present
+when `isUnlimited` is true, `dataMb` missing when `isUnlimited` is false, and for a
+`destinationId` that does not exist (field `destinationId`). `409 UNIQUE_VIOLATION` on a
+duplicate `(destinationId, slug)`.
 
-`PATCH /api/admin/packages/[id]`, `DELETE /api/admin/packages/[id]` (`204`; `409` when the
-package is referenced by an order).
+`PATCH /api/admin/packages/[id]` — partial body; the two cross-column rules above are
+evaluated against the **merged** row, so a partial body cannot produce an invalid
+combination. `DELETE /api/admin/packages/[id]` — `204`; `409 PACKAGE_IN_USE` when an order
+references the package. Both answer `404` when the row does not exist.
 
 Editing a package never rewrites existing orders — orders keep their name/price snapshots.
 
@@ -317,7 +336,13 @@ upstream error. The admin can always submit the form manually.
 | `status` | `pending` \| `paid` \| `failed` | all |
 | `range` | `24h` \| `7d` \| `30d` | `7d` |
 | `q` | ≤ 64 chars; **exact match** on `order_number` (uppercased) or on `customer_email` (lowercased) | — |
-| `cursor` | opaque `base64(createdAt|id)` | first page |
+| `cursor` | opaque `base64url(createdAt|id)` | first page |
+
+`q` is shape-checked, not cleaned: the value must look like an order number (`RML-[A-Z0-9]{6}`)
+or an email address. Anything else — including characters that are structural in a PostgREST
+filter (`,`, `(`, `)`, `"`, `*`, `%`, `\`) — answers `422 VALIDATION_ERROR`; the server never
+interpolates the value into an `or=(…)` expression, it selects one column and uses `eq`.
+`status`, `range`, and a present-but-invalid `cursor` also answer `422`.
 
 `limit` is fixed at 10; a supplied `limit` is ignored, never trusted.
 
@@ -338,7 +363,8 @@ upstream error. The admin can always submit the form manually.
 
 ### 5.5 `GET /api/admin/payments`
 
-Same filters minus `q` (payments are found through orders). Rows: `providerReference`,
+Same filters minus `q` (payments are found through orders): `status`, `range`, `cursor`, all
+validated the same way (`422` on an invalid value). Rows: `providerReference`,
 `orderNumber`, `amountIdr`, `status`, `createdAt`, `paidAt`, `failureCode`.
 
 ### 5.6 `POST /api/admin/orders/[id]/notification/resend`
@@ -415,8 +441,8 @@ the claim, lease 120 s.
 | `GET /api/orders/[token]` | 200 | 404 |
 | `POST /api/payments/verify` | 200 | 404, 409 |
 | `POST /api/mock-gateway/[ref]/settle` | 200 | 404, 422 |
-| `POST/PATCH/DELETE /api/admin/destinations*` | 201/200/204 | 401, 403, 409, 422 |
-| `POST/PATCH/DELETE /api/admin/packages*` | 201/200/204 | 401, 403, 409, 422 |
+| `POST/PATCH/DELETE /api/admin/destinations*` | 201/200/204 | 400, 401, 403, 409, 422 |
+| `POST/PATCH/DELETE /api/admin/packages*` | 201/200/204 | 400, 401, 403, 409, 422 |
 | `POST /api/admin/destinations/enrich` | 200 | 401, 403, 404, 503 |
 | `GET /api/admin/orders` · `GET /api/admin/payments` | 200 | 401, 403, 422 |
 | `POST /api/admin/orders/[id]/notification/resend` | 200 / 202 | 401, 403, 409, 502 |

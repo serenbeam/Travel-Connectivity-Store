@@ -8,7 +8,7 @@ minimal admin CMS, built as a Next.js **modular monolith** on Supabase.
 | Layer | Status |
 | --- | --- |
 | Product & technical design (this documentation set) | **Approved** — 26 Nov 2026 |
-| Application code, migrations, tests | **Partial** — E-3 schema/RLS/SQL functions, the E-4 storefront, and the E-5 checkout/payment/order flow exist; admin routes do not |
+| Application code, migrations, tests | **Partial** — E-3 schema/RLS/SQL functions, the E-4 storefront, the E-5 checkout/payment/order flow, and the E-6 admin CMS exist; admin behaviour is implemented but not yet verified against a running Supabase instance |
 | Automated test suite | **Partial** — 32 unit tests + 85 integration tests; Playwright pending (E-8) |
 | Deployment | **Not configured** |
 
@@ -121,8 +121,16 @@ Not yet executed — these are the approved steps for implementation.
 npm install
 npx supabase start          # local Postgres + Auth + RLS environment
 npx supabase db reset       # apply migrations + seed
-npm run dev                 # http://localhost:3000
+
+# Create (or repair) the single admin account. The credentials are used for this run only
+# and are never committed; the role is written to app_metadata (never user_metadata).
+ADMIN_EMAIL=admin@roamly.test ADMIN_PASSWORD='choose-a-strong-password' npm run db:seed-admin
+
+npm run dev                 # http://localhost:3000  · admin panel: http://localhost:3000/admin/login
 ```
+
+The seed script is idempotent: an existing account only gets its `app_metadata.role` repaired, its
+password is left untouched. It refuses a non-loopback Supabase URL unless `--allow-remote` is passed.
 
 ## Environment variables
 

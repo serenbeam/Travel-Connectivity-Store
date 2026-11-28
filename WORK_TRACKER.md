@@ -62,23 +62,24 @@ Aturan tambahan:
 
 | Field | Nilai |
 | --- | --- |
-| Fase terakhir selesai | **E-5 Checkout, Payment & Idempotency — `CLOSED`** (2026-11-27, 3 commit + push, + 3 commit pasca-penutupan) |
-| Fase aktif | **E-5 Checkout, Payment & Idempotency — `CLOSED`** · berikutnya E-6 (belum dimulai) |
+| Fase terakhir selesai | **E-6 Admin CMS — `CLOSED`** (2026-11-28; implementasi + verifikasi berlapis; 2 AC parsial dialihkan ke E-8) |
+| Fase aktif | **E-6 Admin CMS — `CLOSED`** · berikutnya E-7 (belum dimulai, menunggu keputusan kanal `KI-04`) |
 | Checkpoint commit | E-2/E-2a: `7ed8371e81e4090498398f3576ffe4833b08a2c5` · E-3: `af53146`, `f4172e1`, `7d18015` · E-4: `96b69b2`, `33d99f6`, `23f25b4` + commit penutupan fase · E-5: `5fc02d6`, `5565b5b`, `220517c` (ter-push) · pasca-penutupan: `9cd350d`, `d429ce7`, + commit dokumentasi ini (2026-11-27) · baseline dokumen: `5d5895f9223f8a700a7248745ab5905b7b4c87fb` |
 | Deadline project | **2026-11-29 23:59 WIB** |
-| Fase selesai | **6 / 10 (60%)** + 1 checkpoint tanpa bobot (E-2a) |
-| Acceptance criteria terverifikasi | **27 penuh + 4 database-scope + 11 pending / 42** (E-5 memverifikasi 18 AC baru; sisa database-scope: T7, T10, T11, T15 — menunggu E-7) |
-| Kode aplikasi | **53 file** di `src/**` (`.ts`/`.tsx`): 34 sebelum E-5, 19 ditambahkan E-5, 1 modul `checkout-key.ts` pasca-penutupan, dikurangi 1 placeholder yang dihapus di E-4 |
+| Fase selesai | **7 / 10 (70%)** + 1 checkpoint tanpa bobot (E-2a) |
+| Acceptance criteria terverifikasi | **38 / 42** = 34 penuh + 4 database-scope · 2 parsial (A1, E2 → E-8) · 2 pending (T12, T14 → E-7). Sisa database-scope: T7, T10, T11, T15 |
+| Kode aplikasi | **90 file** di `src/**` (`.ts`/`.tsx`): 53 sebelum E-6, 37 ditambahkan E-6 (13 halaman/action admin, 7 route handler admin, 9 modul/lib, 7 komponen, 1 guard) |
 | Migration | **6** (`supabase/migrations/`) |
-| Test dijalankan | **95 unit** (7 file) + **85 integration** (8 file) + smoke HTTP 27/27 · production build PASS (12 route) · DB integrity 7×0 |
+| Test dijalankan | **167 unit** (12 file, PASS) + **88 integration** (9 file, PASS) + walkthrough HTTP ber-sesi nyata + pagination orders 3 halaman/30 unik tanpa overlap & payments 2 halaman tanpa overlap · production build PASS (26 route) · lint 0/0 · typecheck 0 |
 | Browser E2E | **M1–M4 PASS (user-attested)**; tidak ada artefak berlabel, screenshot, atau laporan Playwright (E-8) |
 | Deployment | **belum dikonfigurasi** |
-| Blocker terbuka | **0 untuk E-4/E-5** · 1 project-level (`KI-04`, milik E-7) |
-| Persetujuan yang ditunggu | tidak ada · 8 path pasca-penutupan sudah di-commit (3 commit) · E-6 menunggu analisis tersendiri |
+| Blocker terbuka | **0 untuk E-6** (`KI-35` Resolved 2026-11-28) · 1 project-level (`KI-04`, milik E-7) |
+| Persetujuan yang ditunggu | tidak ada untuk E-6 · **keputusan kanal notifikasi (`KI-04`/NA-04)** dibutuhkan sebelum E-7 · commit/push E-6 belum dijalankan |
 
-Ringkasan satu kalimat: **E-5 checkout/payment/order `CLOSED` dan ter-push (`220517c`),
-termasuk penyempurnaan pasca-penutupan yang sudah di-commit (3 commit, 2026-11-27);
-E-6…E-9 berstatus `NOT STARTED`.**
+Ringkasan satu kalimat: **E-6 admin CMS `CLOSED` (2026-11-28)** — 43 file baru + 5 file diubah,
+0 migration, 0 dependency baru, `KI-35` diperbaiki lalu terverifikasi (167 unit, 88 integration,
+pagination 3 halaman tanpa overlap, build 26 route); AC-A1 dan AC-E2 tetap `Partially Verified`
+dan dijadwalkan pada E-8; belum di-commit/di-push, dan E-7 belum dimulai.**
 
 ---
 
@@ -94,14 +95,14 @@ E-6…E-9 berstatus `NOT STARTED`.**
 | E-3 | Schema & RLS | `CLOSED` | 12% |
 | E-4 | Storefront & Seed | `CLOSED` | 12% |
 | E-5 | Checkout, Payment & Idempotency | `CLOSED` | 18% |
-| E-6 | Admin CMS | `NOT STARTED` | 12% |
+| E-6 | Admin CMS | `CLOSED` | 12% |
 | E-7 | n8n & Outbox | `NOT STARTED` | 8% |
 | E-8 | Testing & Polish | `NOT STARTED` | 5% |
 | E-9 | Final Verification & Submission | `NOT STARTED` | 3% |
 
-**Progres berbobot: 72%** = E-0 (10%) + E-1 (10%) + E-2 (10%) + E-3 (12%) + E-4 (12%) +
-E-5 (18%). E-2a **bukan** fase berbobot (0%) — ia checkpoint Git di dalam E-2. E-6…E-9
-(total 28%) tetap `NOT STARTED`.
+**Progres berbobot: 84%** = E-0 (10%) + E-1 (10%) + E-2 (10%) + E-3 (12%) + E-4 (12%) +
+E-5 (18%) + E-6 (12%). E-2a **bukan** fase berbobot (0%) — ia checkpoint Git di dalam E-2.
+E-7…E-9 (total 16%) tetap `NOT STARTED`.
 
 ### 3.2 Artifact readiness
 
@@ -110,14 +111,14 @@ Angka "direncanakan" berasal dari dokumen yang sudah disetujui, bukan estimasi.
 | Artefak | Terbangun | Direncanakan | Sumber |
 | --- | --- | --- | --- |
 | Dokumen proyek | **8** | 8 | `README.md` §Documentation map |
-| Halaman / route UI | **7** | 13 | `docs/design-solution.md` §3 |
-| Route handler API | **4** | 16 | `docs/api-contract.md` |
+| Halaman / route UI | **13** | 13 | `docs/design-solution.md` §3 |
+| Route handler API | **13** | 16 | `docs/api-contract.md` (2 endpoint JSON publik + 1 resend = sisa E-7/backlog) |
 | Tabel database | **7** | 7 | `docs/database-design.md` §2 |
 | SQL function | **5** | 5 | `docs/database-design.md` §5 |
-| Integration eksternal | **0** | 1 | `docs/technical-decisions.md` ADR-8 |
+| Integration eksternal | **1** | 1 | `docs/technical-decisions.md` ADR-8 (`countriesnow.space`, admin enrich) |
 | Workflow n8n | **0** | 1 | `docs/technical-decisions.md` ADR-9 |
-| Acceptance criteria verified | **31 / 42** (27 penuh + 4 database-scope; 11 pending E-6/E-7) | 42 | `docs/mvp-scope.md` §6 |
-| Test (unit + integration + E2E) | **95 unit** (7 file) + **85 integration** (8 file) + smoke 27/27; E2E manual M1–M4 user-attested | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
+| Acceptance criteria verified | **38 / 42** (34 penuh + 4 database-scope) + 2 parsial (A1, E2 → E-8) + 2 pending (T12, T14 → E-7) | 42 | `docs/mvp-scope.md` §6 |
+| Test (unit + integration + E2E) | **167 unit** (12 file) + **88 integration** (9 file) + smoke HTTP 27/27 + pagination 3 halaman/30 unik (orders) & 2 halaman (payments); E2E manual M1–M4 user-attested | sesuai `mvp-scope` §7 | `docs/mvp-scope.md` §7 |
 | Deployment demo | **0** | 1 | di luar cakupan dokumen |
 | File foundation aplikasi | **25** | 25 | di-commit pada `7ed8371` |
 | Dependency terpasang | **17** | 17 | `package.json` / `package-lock.json` |
@@ -182,16 +183,16 @@ Dicatat agar perubahan tak sengaja pada 8 dokumen dapat dideteksi. sha256, 12 ka
 
 | File | sha256 (prefix) |
 | --- | --- |
-| `README.md` | `dcdd6c030261` |
+| `README.md` | `4fdea36e5466` |
 | `AGENTS.md` | `738e98ada2ae` |
-| `docs/api-contract.md` | `9a1f2e444e2a` |
+| `docs/api-contract.md` | `86779bccce20` |
 | `docs/architecture.md` | `f72aa579bf77` |
 | `docs/database-design.md` | `67f126c88185` |
-| `docs/design-solution.md` | `44cb8a42af37` |
-| `docs/mvp-scope.md` | `486562ca4560` |
+| `docs/design-solution.md` | `26d80e4be74e` |
+| `docs/mvp-scope.md` | `cee8bbb8725e` |
 | `docs/technical-decisions.md` | `d526ccf29b5c` |
 
-(Diperbarui 2026-11-27 setelah rekonsiliasi E-3; nilai lama tercatat pada riwayat Git.)
+(Diperbarui 2026-11-28 setelah sinkronisasi kontrak E-6; nilai lama tercatat pada riwayat Git.)
 
 ### E-2 — Foundation — `COMPLETED`
 
@@ -430,24 +431,69 @@ katalog · RTL/component test.
 - **References:** `docs/api-contract.md` §4.3–§4.6, §6 · `docs/database-design.md` §5.1–§5.2 ·
   `docs/mvp-scope.md` §6.1–§6.2, §6.4 · `docs/technical-decisions.md` ADR-5, ADR-6, ADR-7, ADR-10
 
-### E-6 — Admin CMS — `NOT STARTED`
+### E-6 — Admin CMS — `CLOSED`
 
 - **Objective:** Admin dapat mengelola katalog dan memantau order/payment dengan filter
   server-side.
 - **Tasks:**
-  - [ ] Login/logout (Supabase Auth, Server Action) + seed admin
-  - [ ] `requireAdmin()` di setiap route/page admin + guard `proxy.ts`
-  - [ ] CRUD destinasi + aksi "Fill from API"
-  - [ ] CRUD paket (validasi harga/validity)
-  - [ ] Daftar order: 24h/7d/30d, status, search, keyset 10 baris
-  - [ ] Daftar payment: filter setara
-  - [ ] Overview (4 angka + 5 order terbaru)
-- **Status:** `NOT STARTED`
-- **Verification result:** Belum ada. Bukti yang diperlukan: Playwright flow admin lulus,
-  `401`/`403` terbukti, halaman tidak menampilkan lebih dari 10 baris.
-- **Blockers / risks:** Bergantung pada E-3 dan E-4. Risiko rendah.
-- **Completion date:** —
-- **References:** `docs/api-contract.md` §5 · `docs/mvp-scope.md` §6.3 · `AGENTS.md` §Forbidden patterns
+  - [x] Login/logout (Supabase Auth, Server Action) + seed admin (`scripts/seed-admin.mjs`, idempoten, `app_metadata`)
+  - [x] `requireAdmin()` di dashboard layout + `adminGuard()` di **setiap** route handler admin + guard `proxy.ts`
+  - [x] CRUD destinasi + aksi "Fill from API" (`countriesnow.space`, advisory, tanpa write)
+  - [x] CRUD paket (validasi harga/validity + CHECK lintas kolom pada baris hasil merge)
+  - [x] Daftar order: 24h/7d/30d, status, search (order number/email), keyset 10 baris
+  - [x] Daftar payment: filter range/status setara
+  - [x] Overview (3 angka + 5 order terbaru)
+- **Status:** `CLOSED` (2026-11-28). Kode `IMPLEMENTED`, verifikasi `VERIFIED` untuk lingkup E-6;
+  **AC-A1 dan AC-E2 tetap `Partially Verified`** dan dijadwalkan pada E-8 (uji browser & jalur 503).
+- **Alasan closure:** seluruh AC E-6 yang dapat diuji sudah berlukti (AC-A2/A3/A4/A5/A6/A7, AC-E1,
+  FR-A2, FR-A5, NFR3); 0 P0/P1 terbuka (`KI-35` Resolved); gate statis (lint/typecheck/unit/build)
+  dan `test:int` hijau; kontrak API sinkron; sisa item P2/P3 tercatat di §6.
+- **Verification result (2026-11-28, benar-benar dijalankan):**
+  - **Gate 1–2 (lingkungan):** Docker sudah berjalan; `npx supabase start` exit 0 **tanpa reset**;
+    6/6 migration terpasang; seed utuh (5 destinasi aktif / 15 paket aktif); `db:seed-admin`
+    idempoten → "admin ensured (updated) …, password unchanged", role `admin`, email terkonfirmasi,
+    tanpa secret di log.
+  - **Gate 3–4 (integration):** fixture R-3 diperbaiki (pasangan fixture tetap `admin-fixture-order-*`
+    + pasangan acak yang dihapus; seed tidak disentuh). `npm run test:int` → **88/88 PASS** (9 file),
+    termasuk 3 assertion baru: `23503` destinasi ber-paket, `23503` paket ber-order, `23505` slug duplikat.
+    Jumlah katalog aktif tetap 5/15 setelah suite.
+  - **Gate 5 (walkthrough HTTP dengan cookie sesi nyata dari Supabase Auth):**
+    tanpa sesi → `401`; sesi `member` → `403 FORBIDDEN` pada API dan panel “Access denied” (200) pada
+    halaman; sesi `admin` → 200 pada API dan halaman. CRUD: create 201, duplicate slug
+    `409 UNIQUE_VIOLATION`, PATCH 200, delete destinasi ber-paket `409 DESTINATION_IN_USE`,
+    delete paket/pdestinasi bebas 204, `destinationId` tidak ada → `422` field-level, `isUnlimited`
+    + `dataMb` → `422`, `validityDays=91` → `422`. AC-A4: paket aktif muncul di halaman destinasi
+    (link + Rp 99.000) dan detail 200 berisi nama; setelah nonaktif → 0 link dan detail 404.
+    AC-A7: halaman orders memuat 20 timestamp WIB (contoh `28 Nov 2026, 11.39`) dan **0** ISO mentah;
+    payments 32 timestamp WIB. AC-E1: enrich `Japan` → 200 `JP`/`JPY`/emoji/`countriesnow` tanpa
+    perubahan jumlah baris; negara tak dikenal → `404`; input kosong → `422`.
+  - **Gate 6 (dokumen):** `docs/api-contract.md` disinkronkan (+38/−12): 2 kode error baru, aturan
+    bentuk `q` → 422, cursor `base64url`, respons `{ data }`, catatan guard/`400` id, status header.
+  - **Gate 7 (statis):** `lint` 0/0 · `typecheck` 0 · `unit 158/158` (12 file). Build tidak dijalankan
+    ulang karena `src/**` tidak berubah sejak build PASS sebelumnya.
+  - **Gate 8 — perbaikan `KI-35` (`PERM-FIX-1`, 2026-11-28, 4 file):** `src/lib/admin-list.ts`
+    (pola ISO menerima `±HH:MM`, fungsi `toUtcInstant()` menormalkan ke `…Z` + menolak instant mustahil,
+    fungsi `keysetFilter()` mengutip nilai), `src/modules/orders/admin-queries.ts`,
+    `src/modules/payments/admin-queries.ts`, `tests/unit/admin-list.test.ts`.
+    Bukti sesudah perbaikan (build baru + sesi admin nyata):
+    - unit **167/167 PASS** (12 file; `admin-list` 24 kasus, +9 untuk `KI-35`), `typecheck` 0, `lint` 0/0;
+    - `npm run build` **PASS** 26 route;
+    - orders API hal. 1/2/3 = **200/200/200**, 10 baris per halaman, overlap **0**, 30 id unik,
+      urutan `createdAt` menurun; payments hal. 1/2/3 = 200, 10 baris, overlap **0**;
+    - UI “Next page” orders & payments: halaman 2 **tanpa** alert “filters are invalid”, 10 baris,
+      tautan “First page” hadir; overlap `<tbody>` = **0** (orders 10/10/10, payments 10/10);
+      halaman 2 payments memuat 28 timestamp WIB dan 0 ISO mentah;
+    - `npm run test:int` **88/88 PASS** (9 file).
+  - **Belum dijalankan:** interaksi form di browser (login form, submit form, keyboard/visual), dan
+    AC-E2 jalur `503` (upstream tidak bisa dipaksa gagal tanpa memblokir jaringan) — keduanya
+    dijadwalkan pada **E-8** (Playwright + uji jaringan).
+- **Blockers / risks:** **0 blocker E-6.** `KI-35` **Resolved** 2026-11-28 (lihat Gate 8); `KI-33`,
+  `KI-29`, `KI-30`, `KI-24`, `KI-20` Resolved. Sisa item bukan blocker: AC-A1 & AC-E2 parsial (uji
+  browser/503 → E-8), `KI-04` milik E-7, `KI-36`/`KI-37`/`KI-38` (P3, diterima).
+  **Status fase: `CLOSED` (2026-11-28) — dengan 2 AC `Partially Verified` yang dialihkan ke E-8.**
+- **Completion date:** 2026-11-28
+- **References:** `docs/api-contract.md` §5 · `docs/mvp-scope.md` §6.3 · `AGENTS.md` §Forbidden patterns ·
+  `src/modules/auth/guard.ts` · `src/lib/admin-list.ts` · `src/modules/orders/admin-search.ts`
 
 ### E-7 — n8n & Outbox — `NOT STARTED`
 
@@ -540,6 +586,8 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | DL-27 | 2026-11-27 | Paket dialamatkan dengan **dua slug** (`/destinations/[destinationSlug]/packages/[packageSlug]`) sehingga `UNIQUE (destination_id, slug)` menjadi penentu, tanpa perubahan skema (D-01) | Implemented | `src/app/(storefront)/destinations/[destinationSlug]/packages/[packageSlug]/page.tsx` · `src/modules/catalog/queries.ts` |
 | DL-22 | 2026-11-26 | `settle_payment` hanya `succeeded`/`failed`; `record_mock_settlement` menerima 3 outcome (`pending` boleh naik ke terminal, terminal immutable) | Approved (desain) | DB §5.2, §5.5 · API §4.5 |
 | DL-23 | 2026-11-26 | `orders.package_data_snapshot` (turunan deterministik), kardinalitas order→payment **at most one**, pencarian admin **exact match** | Approved (desain) | DB §1, §2.2, §2.3 · API §5.4 |
+| DL-29 | 2026-11-28 | Pencarian admin memakai **parser bentuk tertutup** (`RML-[A-Z0-9]{6}` atau email) lalu satu `.eq(kolom, nilai)`; tidak ada `or=()` dari teks user. Cursor keyset divalidasi ulang (ISO instant + UUID) sebelum interpolasi. | Implemented + Verified (unit) | `src/modules/orders/admin-search.ts` · `src/lib/admin-list.ts` · `tests/unit/admin-search.test.ts`, `tests/unit/admin-list.test.ts` |
+| DL-30 | 2026-11-28 | Seluruh baca/tulis CMS memakai **client authenticated** (RLS `is_admin()`), bukan service role; service role hanya dipakai jalur guest/E-5 yang sudah ada | Implemented | `src/modules/catalog/admin-{queries,mutations}.ts` · `src/modules/{orders,payments}/admin-queries.ts` |
 
 ---
 
@@ -558,7 +606,7 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-09 | Git belum diinisialisasi | Low | **Resolved** (2026-11-26) | — | Repo terinisialisasi; 2 commit, `origin/main` sinkron |
 | KI-10 | Sisa waktu ±3 hari untuk 8 fase implementasi | High | Risiko | E-8, E-9 | Cut-line + buffer submit |
 | KI-19 | `src/lib/supabase/admin.ts` belum dibuat (deferred/open) | Low | **Resolved** (2026-11-27) | — | Dibuat di E-3: `server-only`, tanpa `next/server`, timeout `AbortSignal` inline |
-| KI-20 | `/admin/login` belum ada → halaman tujuan redirect masih 404 | Low | Terbuka | — | Ditutup E-6 |
+| KI-20 | `/admin/login` belum ada → halaman tujuan redirect masih 404 | Low | **Resolved** (2026-11-28) | — | Halaman `/admin/login` + Server Action `signInAction` dibuat di E-6; `/admin` tanpa sesi → 307 ke login (terbukti HTTP) |
 | KI-21 | `eslint@9.39.5` memunculkan peringatan EOL saat install | Low | **Diterima (warning)** | — | Pantau; naikkan hanya bila seluruh plugin mendukung |
 | KI-22 | Baris outbox `failed` + `attempts = 5` bersifat terminal untuk dispatch; pemulihan hanya lewat runbook operator (bukan jalur aplikasi) | Low | **Diterima** (2026-11-27) | E-7 | Didokumentasikan di ADR-9 §Recovery dan DB §5.3 |
 | KI-23 | `claim_outbox` mengembalikan `locked_at` sebagai string ISO; konversi ke `Date` memutus fencing | Medium | **Dimigasi** (2026-11-27) | E-7 | Dijaga assert `assertOpaqueFencingToken` + TP-2/TP-4 di `tests/integration/outbox.test.ts` |
@@ -567,6 +615,18 @@ Satu baris per keputusan yang sudah disetujui. Alasan lengkap ada di dokumen ruj
 | KI-26 | NFR9 contrast ratio belum diaudit terukur (≥ 4.5:1) | Low | **`DEFERRED` — post-MVP** (2026-11-27) | — | Ukur saat polish; token warna sudah ditetapkan di `src/app/globals.css` |
 | KI-27 | NFR9 keyboard baru diuji pada **homepage** (header, CTA, skip-to-content, focus indicator); halaman katalog dan detail paket belum dikonfirmasi | Low | **Terbuka** (2026-11-27) | — | Uji keyboard pada `/destinations` serta detail destinasi/paket sebelum mengklaim NFR9 untuk seluruh storefront |
 | KI-28 | **GAP-1**: UI tidak memanggil `POST /api/payments/verify` setelah gateway mencatat outcome → order/payment tetap `pending` | Medium | **Resolved** (2026-11-27) | — | Ditutup dengan 1 file (`mock-gateway-controls.tsx`): settle → verify → redirect; T1–T8 lulus |
+| KI-29 | **Kontrak belum disinkronkan**: `UNIQUE_VIOLATION` (409) dan `PACKAGE_IN_USE` (409) ditambahkan di `src/lib/http.ts`, aturan bentuk `q` → 422, tetapi `docs/api-contract.md` §2/§5.2/§5.4 dikecualikan dari otorisasi E-6 | Medium | **Resolved** (2026-11-28) | — | Disinkronkan via `PERM-DOC-1`: +38/−12 baris, 2 kode error, aturan bentuk `q`, cursor `base64url`, respons `{ data }`, catatan guard/400 |
+| KI-30 | Cursor admin memakai **base64url**, bukan base64 polos seperti tertulis di §5.4 (`+`/`/` tidak aman di query string) | Low | **Resolved** (2026-11-28) | — | Didokumentasikan di §5.4 saat `PERM-DOC-1`; klien memperlakukannya sebagai opaque |
+| KI-31 | Pagination admin hanya "Next page" + "First page" (tidak ada tombol "Previous" keyset) | Low | **Diterima** (2026-11-28) | — | AC-A5 terpenuhi (10 baris, filter server-side); "Previous" = P3 post-MVP |
+| KI-32 | Sidebar admin menjadi strip navigasi horizontal `<lg`, bukan drawer seperti `design-solution` §6 | Low | **Diterima** (2026-11-28) | — | Tanpa JavaScript tambahan; drawer = polish E-8 |
+| KI-33 | **Gate verifikasi E-6**: Docker/Supabase lokal belum berjalan → `test:int` (termasuk 3 assertion E-6), `db:seed-admin`, login nyata, CRUD lewat sesi, filter/keyset berisi data, dan ACL enrich belum dijalankan | High | **Resolved** (2026-11-28) | — | Gate 1–7 dijalankan: `supabase start` tanpa reset, seed idempoten, `test:int` 88/88, walkthrough HTTP ber-sesi nyata. Temuan baru → `KI-35` |
+| KI-35 | **P1 — pagination keyset halaman ≥ 2 gagal.** Cursor yang diterbitkan server berisi `createdAt` ber-offset `+00:00` (format PostgREST), tetapi `ISO_INSTANT_PATTERN` di `src/lib/admin-list.ts` hanya menerima akhiran `Z`, sehingga `decodeCursor()` menolak cursor milik server sendiri: `GET /api/admin/orders?cursor=…` → **422**, `GET /api/admin/payments?cursor=…` → **422**, dan halaman `/admin/orders` halaman 2 menampilkan alert “filters are invalid”. Halaman 1 benar (10 baris + `nextCursor`). | **P1** | **Resolved** (2026-11-28) | — | Rekomendasi perbaikan minimal (butuh izin): terima offset `±HH:MM` di pola validasi **dan** kutip nilai `createdAt` (`"…"`) saat menyusun filter `or(created_at.lt.“…”,and(created_at.eq.“…”,id.lt.…))`; tambah 2 kasus unit (offset `+00:00` diterima, tamper tetap ditolak). **Resolusi (PERM-FIX-1, 4 file):** pola ISO menerima `±HH:MM`; `toUtcInstant()` menormalkan ke `…Z` (presisi mikrodetik) dan menolak instant mustahil; `keysetFilter()` mengutip kedua nilai pada `or(…)`. Bukti: unit **167/167** (`admin-list` 24 kasus), orders API hal. 1/2/3 = **200/200/200** dengan **30 id unik, overlap 0**, payments hal. 1/2/3 = 200 dengan **overlap 0**, UI halaman 2 tanpa alert, `test:int` **88/88**, build **26 route**. |
+| KI-34 | Copy UI admin berbahasa Inggris (mengikuti copy storefront), bukan Indonesia | Low | **Diterima** (2026-11-28) | — | Konsisten dengan bahasa UI aplikasi; tidak ada permintaan lokalisasi admin |
+| KI-36 | `GET /api/admin/destinations` dan `GET /api/admin/packages` menjawab `405` tanpa sesi (resolusi method Next sebelum handler); tidak membocorkan data — list memang bukan endpoint | Low | **Diterima** (2026-11-28) | — | Tanpa aksi; kontrak §5 hanya mendefinisikan mutasi + list order/payment |
+| KI-37 | Satu pasangan fixture non-aktif (`fk-ord-dest-*`/`fk-ord-pkg-*`) dari run uji pertama tetap ada karena order-nya permanen (deferred I2 trigger + `ON DELETE RESTRICT`) | Low | **Diterima** (2026-11-28) | — | Tidak memengaruhi katalog aktif (5/15) maupun AC; fixture baru memakai slug tetap `admin-fixture-*` |
+| KI-38 | `enrich` memperlakukan `error: true` dari upstream sebagai `404`, bukan `503 ENRICHMENT_UNAVAILABLE` | Low | **Diterima** (2026-11-28) | E-8 | Semantik tidak ideal, tidak menghambat AC-E1; diperbaiki bersama uji jalur `503` |
+| KI-39 | **AC-A1 parsial:** login admin dengan akun seed terbukti (sesi nyata `role=admin`), tetapi interaksi form login di browser (submit, pesan error generik, logout) belum diuji otomatis | Low | **Terbuka — E-8** | — | Playwright 2 flow (admin login + package management) di E-8 |
+| KI-40 | **AC-E2 parsial:** jalur `503 ENRICHMENT_UNAVAILABLE` ada dan form tetap dapat disubmit manual, tetapi kegagalan upstream belum dipaksa secara langsung | Low | **Terbuka — E-8** | — | Uji dengan upstream diblokir (DevTools/offline) di E-8 |
 
 Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum ditemukan.
 
@@ -588,23 +648,31 @@ Catatan: `Diterima` berarti risiko diketahui dan disengaja, bukan bug yang belum
 | NA-10 | Push empat commit E-4 ke `origin/main` | NA-09 | **Selesai** 2026-11-27 (`83f961b..dcbd315`, fast-forward) |
 | NA-11 | Analisis + implementasi + verifikasi + commit lokal E-5 | NA-10 | **Selesai** (`feat`/`test`/`docs` E-5) |
 | NA-12 | Push tiga commit E-5 ke `origin/main` | NA-11 | **Selesai** 2026-11-27 (`dcbd315..220517c`, fast-forward) |
-| NA-13 | Mulai **E-6 Analysis/Proposal** (bukan izin implementasi) | NA-12 | **Ya (pemilik proyek)** |
+| NA-13 | Mulai **E-6 Analysis/Proposal** (bukan izin implementasi) | NA-12 | **Ya (pemilik proyek)** — selesai 2026-11-28 |
+| NA-14 | Implementasi E-6 (43 file baru, 5 file diubah) + verifikasi parsial | NA-13 | **Selesai** 2026-11-28 (`IMPLEMENTED`, `PARTIALLY VERIFIED`) |
+| NA-15 | Jalankan gate verifikasi E-6: `PERM-OH-1…6` (Docker, `supabase start`, `db reset`, `db:seed-admin`, `test:int`, manual walkthrough) | NA-14 | **Ya (pemilik proyek)** |
+| NA-16 | Sinkronkan `docs/api-contract.md` dengan `KI-29`/`KI-30` | NA-15 | **Selesai** 2026-11-28 (`PERM-DOC-1`) |
+| NA-17 | Perbaiki **`KI-35`** (cursor offset `+00:00`): terima `±HH:MM` + kutip nilai saat menyusun filter, tambah unit test | NA-16 | **Selesai** 2026-11-28 (`PERM-FIX-1`, 4 file) |
+| NA-18 | Verifikasi ulang halaman 2 (API + UI) setelah `KI-35` diperbaiki, lalu ajukan closure review E-6 | NA-17 | **Selesai** 2026-11-28 (orders 3 halaman/30 unik, payments 2 halaman, tanpa overlap) |
+| NA-19 | E-6 dinyatakan **`CLOSED`** setelah final review (AC-A1 & AC-E2 tetap parsial → E-8) | NA-18 | **Selesai** 2026-11-28 |
+| NA-20 | Putuskan kanal notifikasi n8n (`KI-04`/NA-04) sebelum E-7 | NA-19 | **Ya (pemilik proyek)** |
+| NA-21 | E-8: Playwright 2 flow (login admin + package management, checkout→paid), uji jalur `503` enrich, keyboard/kontras (`KI-26`, `KI-27`), drawer sidebar (`KI-32`), `Previous` keyset (`KI-31`), `KI-38` | NA-19 | **Ya (fase terpisah)** |
 
 Urutan yang disarankan: **NA-10** (push manual) → **NA-11** (mulai E-5 Analysis/Proposal) → implementasi E-5 hanya setelah proposalnya disetujui; **NA-03/NA-04** diperlukan sebelum E-4/E-7; **NA-08** menunggu
 persetujuan terpisah — tanpa izin tersebut, `AGENTS.md` dan `docs/design-solution.md` tidak
 disentuh.
 
-### 7.1 HOLD — pekerjaan E-6…E-8 (tidak boleh dimulai)
+### 7.1 HOLD — pekerjaan E-7…E-8 (tidak boleh dimulai)
 
 E-5 **tidak** berarti MVP selesai. Item di bawah berstatus **HOLD**: belum diimplementasikan,
 tidak diubah, tidak dihapus, dan menunggu workflow analisis + izin implementasi tersendiri.
 
 | Area | Item yang HOLD | Fase | Dependency / alasan HOLD |
 | --- | --- | --- | --- |
-| Admin route & API | 10 route handler admin di `docs/api-contract.md` §5 (`/api/admin/**`) | E-6 | Fondasi katalog, order, dan payment sudah ada; CRUD admin, enrich, dan resend belum |
-| UI admin | `/admin/login`, overview, CRUD destinasi/paket, daftar order & payment, keyset pagination 10 baris | E-6 | Butuh `requireAdmin()` + halaman; belum ada satu pun |
+| Admin route & API | 10 route handler admin di `docs/api-contract.md` §5 (`/api/admin/**`) | E-6 | **Keluar dari HOLD 2026-11-28** (`IMPLEMENTED`): 7 route (10 method) + `adminGuard()`; verifikasi HTTP penuh menunggu `KI-33` |
+| UI admin | `/admin/login`, overview, CRUD destinasi/paket, daftar order & payment, keyset pagination 10 baris | E-6 | **Keluar dari HOLD 2026-11-28** (`IMPLEMENTED`): 6 halaman + 4 halaman form/detail; login & CRUD nyata menunggu `KI-33` |
 | Notifikasi & n8n | Dispatcher (`after()`), `claim_outbox`/`finish_outbox` di kode, webhook + `X-Webhook-Secret`, retry 10 s | E-7 | RPC + sweep tersedia; dispatcher, workflow n8n, dan kanal (KI-04) belum dipilih |
-| AC fase berikutnya | 11 AC: A1–A7 · T12, T14 · E1, E2 | E-6/E-7 | Membutuhkan UI admin, route admin, atau n8n. **Jangan** dinaikkan statusnya sebelum bukti baru |
+| AC fase berikutnya | A1–A7 · T12, T14 · E1, E2 | E-6/E-7 | **E-6 keluar dari HOLD 2026-11-28** (`CLOSED`): A2/A3/A4/A5/A6/A7 + E1 **Verified**; A1 & E2 tetap **Partially Verified** → E-8 (`KI-39`, `KI-40`); T12/T14 tetap milik E-7 |
 | 4 AC database-scope | T7, T10, T11, T15 | E-7 | Paruh database sudah `Verified (database scope)`; paruh HTTP/delivery belum. **Jangan** dinaikkan menjadi `Verified` penuh |
 
 **Sudah keluar dari HOLD:** storefront (E-4) dan checkout/payment/order flow (E-5) — lihat §4 E-4
@@ -640,6 +708,16 @@ Append-only. Satu baris per perubahan status atau artefak.
 | 2026-11-27 | Checkout Validation UX: schema pesan customer-friendly, validasi client/server, 30 test schema; unit 95/95, lint/typecheck PASS | `VERIFIED` |
 | 2026-11-27 | Checkout Session Reuse + Storage Fallback: modul `checkout-key.ts`, 18 test, fallback in-memory, kontrak §6 diperbarui | `VERIFIED` |
 | 2026-11-27 | E-5 final verification pasca-penutupan: production build PASS (12 route) · 95/95 unit (7 file) · smoke 27/27 · DB 7×0 · M1–M4 user-attested · AC-9 target 96 disesuaikan → 95/95; 8 path di-commit (`9cd350d`, `d429ce7`, + commit dokumentasi) | `CLOSED` |
+| 2026-11-28 | E-6 implementasi (otorisasi terbatas): 43 file baru + 5 file diubah (README, `package.json`, `src/lib/http.ts`, `WORK_TRACKER.md`, `.env.example`); 0 migration, 0 dependency baru; `docs/api-contract.md` **tidak** diubah | `IN PROGRESS` |
+| 2026-11-28 | E-6 verifikasi parsial: lint 0/0 · typecheck 0 · unit 158/158 (12 file) · build PASS 26 route · HTTP 401/307 sebelum parsing body · 0 secret di log · regresi storefront 200 | `IN PROGRESS` |
+| 2026-11-28 | E-6 Gate 1–2: `supabase start` **tanpa reset** (6/6 migration, seed utuh), `db:seed-admin` idempoten (password unchanged, tanpa secret di log) | `IN PROGRESS` |
+| 2026-11-28 | E-6 Gate 3–4: fixture R-3 diganti (pasangan tetap + acak, seed tidak disentuh) · `test:int` **88/88 PASS** (9 file, termasuk 3 assertion baru) · katalog aktif tetap 5/15 | `IN PROGRESS` |
+| 2026-11-28 | E-6 Gate 5: walkthrough HTTP ber-sesi nyata — 401/403/200, CRUD + 409/422, storefront reflect (aktif→muncul, nonaktif→404), WIB 20 timestamp & 0 ISO mentah, enrich 200/404/422 tanpa write | `IN PROGRESS` |
+| 2026-11-28 | E-6 Gate 6: `docs/api-contract.md` disinkronkan (+38/−12); `KI-29`/`KI-30` Resolved | `IN PROGRESS` |
+| 2026-11-28 | **Temuan P1 `KI-35`** (Gate 5): cursor keyset ber-offset `+00:00` ditolak validator → halaman ≥ 2 order/payment 422. **Belum diperbaiki** (di luar izin). E-6 tetap `IN PROGRESS` / `PARTIALLY VERIFIED` | `BLOCKED` (KI-35) |
+| 2026-11-28 | **`KI-35` Resolved** (`PERM-FIX-1`, 4 file: `admin-list.ts`, 2 admin query, 1 unit test): `±HH:MM` diterima & dinormalkan, filter dikutip. Bukti: unit **167/167**, orders **3 halaman/30 unik/overlap 0**, payments **2 halaman/overlap 0**, UI halaman 2 tanpa alert, `test:int` **88/88**, build **26 route**, lint 0/0, typecheck 0 | `VERIFIED` |
+| 2026-11-28 | Tracker disinkronkan: AC-A5 & NFR3 → **Verified**; `KI-20`/`KI-29`/`KI-30`/`KI-33`/`KI-35` → **Resolved**; `KI-36`…`KI-40` dicatat (P3 + dua AC parsial); baseline hash dokumen diperbarui; artifact readiness `13/13` halaman, `13/16` handler, AC `38/42` | `VERIFIED` |
+| 2026-11-28 | **E-6 `CLOSED`** setelah final review: 0 P0/P1 terbuka, AC E-6 yang dapat diuji terbukti, dokumen sinkron; 2 AC parsial (A1, E2) dialihkan ke E-8; belum di-commit/di-push | `CLOSED` |
 
 Baris E-2b **tidak** disiapkan sebagai `COMPLETED` di muka. Baris tersebut ditambahkan hanya
 setelah `WORK_TRACKER.md` berhasil diperbarui **dan** V1–V18 lulus, dengan bentuk:
