@@ -1,5 +1,8 @@
+import { after } from 'next/server';
+
 import { jsonError, jsonNotFound, jsonOk } from '@/lib/http';
-import { logError } from '@/lib/logger';
+import { logError, logInfo, logWarn } from '@/lib/logger';
+import { dispatchForOrder } from '@/modules/automation/dispatch';
 import { verifyRequestSchema } from '@/modules/orders/schemas';
 import { performVerify } from '@/modules/orders/verify';
 
@@ -8,6 +11,13 @@ import { performVerify } from '@/modules/orders/verify';
  *
  * The only endpoint that calls `settle_payment`. The settlement outcome comes from the
  * payment adapter, never from this request body.
+ *
+ * E-7: after a successful settlement the outbox row is dispatched from `after()`. The
+ * response never waits for n8n, and a notification failure cannot change the payment: the
+ * callback only touches `notification_outbox` (through claim/finish) and always swallows
+ * its own errors. `after()` is a post-response hook, not a durable queue — if the process
+ * dies before the callback runs, the row stays `pending` and the admin resend path is the
+ * recovery.
  */
 
 const NO_STORE = { 'Cache-Control': 'no-store' } as const;
@@ -38,7 +48,30 @@ export async function POST(request: Request): Promise<Response> {
     const outcome = await performVerify(parsed.data.ref, parsed.data.token);
 
     switch (outcome.kind) {
-      case 'settled':
+      case 'settled': {
+        const orderId = outcome.context.orderId;
+
+        after(async () => {
+          try {
+            const dispatch = await dispatchForOrder(orderId);
+
+            logInfo('notification dispatch finished', { outcome: dispatch.kind });
+          } catch {
+            // A notification failure is never a payment failure.
+            logWarn('notification dispatch crashed', { operation: 'after' });
+          }
+        });
+
+        return jsonOk(
+          {
+            orderStatus: outcome.context.orderStatus,
+            paymentStatus: outcome.context.paymentStatus,
+            paidAt: outcome.context.paidAt,
+          },
+          { status: 200, headers: NO_STORE },
+        );
+      }
+
       case 'pending':
         return jsonOk(
           {

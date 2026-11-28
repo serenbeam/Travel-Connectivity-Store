@@ -94,6 +94,8 @@ export async function getOrderStatusByToken(token: string): Promise<OrderLookup 
 }
 
 export interface PaymentContext {
+  /** Internal only: lets the E-7 dispatcher target `claim_outbox(p_order_id)`. Never serialised. */
+  orderId: string;
   orderStatus: 'pending' | 'paid' | 'failed';
   paymentStatus: 'pending' | 'succeeded' | 'failed';
   paidAt: string | null;
@@ -110,7 +112,7 @@ export async function getPaymentContext(
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('orders')
-    .select('status,paid_at,payments!inner(status,paid_at,provider_reference)')
+    .select('id,status,paid_at,payments!inner(status,paid_at,provider_reference)')
     .eq('access_token_hash', hashCapabilityToken(token))
     .eq('payments.provider_reference', providerReference)
     .maybeSingle();
@@ -126,6 +128,7 @@ export async function getPaymentContext(
   const parsed = orderStatusRowPaymentSchema.parse(data);
 
   return {
+    orderId: parsed.id,
     orderStatus: parsed.status,
     paymentStatus: parsed.payments.status,
     paidAt: parsed.payments.paid_at ?? parsed.paid_at,
@@ -133,6 +136,7 @@ export async function getPaymentContext(
 }
 
 const orderStatusRowPaymentSchema = z.strictObject({
+  id: z.uuid(),
   status: z.enum(['pending', 'paid', 'failed']),
   paid_at: z.string().nullable(),
   payments: z.strictObject({

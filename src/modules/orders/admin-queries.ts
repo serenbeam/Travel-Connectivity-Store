@@ -8,6 +8,10 @@ import {
   type RangePreset,
 } from '@/lib/admin-list';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import {
+  canResendNotification,
+  type ResendEligibilityInput,
+} from '@/modules/automation/dispatch';
 
 import type { OrdersSearch } from './admin-search';
 import {
@@ -42,7 +46,7 @@ const ORDER_COLUMNS = [
   'totalIdr:total_idr',
   'status',
   'payments(status)',
-  'notification_outbox(status)',
+  'notification_outbox(status,attempts,lockedAt:locked_at)',
 ].join(',');
 
 export type AdminOrderStatus = 'pending' | 'paid' | 'failed';
@@ -61,6 +65,12 @@ export interface AdminOrderRow {
   status: AdminOrderStatus;
   paymentStatus: AdminPaymentStatus | null;
   notificationStatus: AdminNotificationStatus | null;
+  /**
+   * Advisory UI state derived from the outbox row with the SAME rule the resend endpoint
+   * enforces (`resendEligibility`). The endpoint re-reads and re-claims, so this boolean is
+   * never a guarantee that a resend will succeed. `attempts` and `locked_at` stay internal.
+   */
+  canResendNotification: boolean;
 }
 
 export interface AdminOrdersQuery {
@@ -107,6 +117,34 @@ function notificationStatusOf(value: unknown): AdminNotificationStatus | null {
   return parsed.success ? parsed.data : null;
 }
 
+/**
+ * Builds the eligibility input from the embedded outbox row. Unknown or missing pieces make
+ * the notification non-resendable rather than throwing: a catalog/order list must never fail
+ * because an integration row is in an unexpected state.
+ */
+function resendStateOf(
+  value: unknown,
+  orderStatus: AdminOrderStatus,
+): ResendEligibilityInput | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  const outbox = value as { status?: unknown; attempts?: unknown; lockedAt?: unknown };
+  const status = notificationStatusSchema.safeParse(outbox.status);
+
+  if (!status.success || typeof outbox.attempts !== 'number' || !Number.isInteger(outbox.attempts)) {
+    return null;
+  }
+
+  return {
+    status: status.data,
+    attempts: outbox.attempts,
+    lockedAt: typeof outbox.lockedAt === 'string' ? outbox.lockedAt : null,
+    orderStatus,
+  };
+}
+
 /** Transport row -> DTO with an explicit whitelist; nothing internal leaks upward. */
 function toAdminOrderRow(row: RawOrderRow): AdminOrderRow {
   if (
@@ -122,6 +160,8 @@ function toAdminOrderRow(row: RawOrderRow): AdminOrderRow {
     throw new AdminOrderQueryError('toAdminOrderRow', 'unexpected row shape');
   }
 
+  const status = orderStatusSchema.parse(row.status);
+
   return {
     id: row.id,
     orderNumber: row.orderNumber,
@@ -131,9 +171,10 @@ function toAdminOrderRow(row: RawOrderRow): AdminOrderRow {
     destinationName: row.destinationName,
     packageName: row.packageName,
     totalIdr: row.totalIdr,
-    status: orderStatusSchema.parse(row.status),
+    status,
     paymentStatus: paymentStatusOf(row.payments),
     notificationStatus: notificationStatusOf(row.notification_outbox),
+    canResendNotification: canResendNotification(resendStateOf(row.notification_outbox, status)),
   };
 }
 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { SearchField } from '@/components/admin/search-field';
+import { ResendNotificationForm } from '@/components/admin/resend-notification-form';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { decodeCursor, parseRangePreset, type RangePreset } from '@/lib/admin-list';
 import { formatIdr, formatWibDateTime } from '@/lib/format';
@@ -95,6 +96,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
         <h1 className="font-display text-2xl text-ink">Orders</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Newest first, 10 rows per page. Times are shown in Asia/Jakarta; storage stays UTC.
+          The Resend action is offered only when the outbox row is resendable; the endpoint
+          re-checks and claims before delivering.
         </p>
       </div>
 
@@ -208,12 +211,15 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
               <th scope="col" className="px-3 py-2">
                 Created (WIB)
               </th>
+              <th scope="col" className="px-3 py-2 text-right">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {page.rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-ink-muted">
+                <td colSpan={10} className="px-3 py-6 text-center text-ink-muted">
                   No orders match these filters.
                 </td>
               </tr>
@@ -247,6 +253,13 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
                   </td>
                   <td className="px-3 py-2 text-ink-muted">
                     {formatWibDateTime(order.createdAt)}
+                  </td>
+                  <td className="px-3 py-2">
+                    {order.canResendNotification ? (
+                      <ResendNotificationForm orderId={order.id} />
+                    ) : (
+                      <span className="block text-right text-xs text-ink-muted">—</span>
+                    )}
                   </td>
                 </tr>
               ))

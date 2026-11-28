@@ -1,0 +1,129 @@
+{
+  "name": "Roamly — Order Paid Email",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Setup (manual, once)\n\n1. **Credentials → Header Auth**: name `X-Webhook-Secret`, value = your `N8N_WEBHOOK_SECRET`.\n   Select it on the *Webhook* node.\n2. **Credentials → SMTP**: host/port/user/password of the test mailbox.\n   Select it on the *Send Email* node and set `From Email` (currently a placeholder).\n3. Activate the workflow, copy the **Production URL** and set it as `N8N_WEBHOOK_URL`.\n\n## Behaviour\n\n- Validates header auth (n8n rejects a wrong/missing secret with 403 before this code runs).\n- Throws on an invalid payload or a wrong `event` → n8n answers 5xx, so the backend records a\n  failed attempt (the backend validates first; this is a safety net).\n- Answers **200 only after** the SMTP node reports that the provider accepted the message.\n- 200 means *provider accepted*, **not** delivered to an inbox.\n\n## Duplicates\n\nNo deduplication is claimed. The backend retries once after a timeout and a duplicate is\npossible; `notificationId` is stable and can be used by the receiver to deduplicate.",
+        "height": 420,
+        "width": 460,
+        "color": 5
+      },
+      "id": "0f0a6f4a-1111-4a11-9a11-111111111111",
+      "name": "Setup notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "roamly-order-paid",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0f0a6f4a-2222-4a22-9a22-222222222222",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        440
+      ],
+      "webhookId": "0f0a6f4a-2222-4a22-9a22-222222222222"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n's Webhook node wraps the request as { headers, params, query, body }.\n// Accept either that wrapper or a direct payload.\nconst raw = $input.first().json;\nconst item = raw && raw.body && typeof raw.body === 'object' ? raw.body : raw;\n\nconst required = [\n  'event',\n  'notificationId',\n  'orderNumber',\n  'customerName',\n  'customerEmail',\n  'destinationName',\n  'packageName',\n  'packageDataSnapshot',\n  'totalIdr',\n  'paidAt',\n];\n\nconst missing = required.filter((key) => item[key] === undefined || item[key] === null || item[key] === '');\n\nif (missing.length > 0) {\n  throw new Error('invalid_payload: missing ' + missing.join(','));\n}\n\nif (item.event !== 'order.paid') {\n  throw new Error('invalid_event: ' + String(item.event));\n}\n\n// Order number shape: RML- followed by six uppercase letters or digits.\nconst orderNumber = String(item.orderNumber);\nconst orderBody = orderNumber.slice(4);\nconst isUpperAlnum = (ch) => (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9');\n\nif (orderNumber.slice(0, 4) !== 'RML-' || orderBody.length !== 6 || !orderBody.split('').every(isUpperAlnum)) {\n  throw new Error('invalid_payload: orderNumber');\n}\n\nif (!Number.isInteger(item.totalIdr) || item.totalIdr <= 0) {\n  throw new Error('invalid_payload: totalIdr');\n}\n\n// paidAt is written by the database as a UTC ISO instant with millisecond precision.\n// Round-tripping through Date proves it is a real instant AND in canonical form,\n// without relying on a regular expression or on locale data.\nconst paidAtMs = Date.parse(String(item.paidAt));\nconst paidAtCanonical = Number.isNaN(paidAtMs) ? null : new Date(paidAtMs).toISOString();\n\nif (paidAtCanonical !== item.paidAt) {\n  throw new Error('invalid_payload: paidAt');\n}\n\n// Deterministic WIB (UTC+7): shift the instant, then read the UTC parts.\n// No Intl, no toLocaleString, no ICU data. Day, month, and year rollover follow from the\n// shifted instant.\nconst WIB_OFFSET_MS = 7 * 60 * 60 * 1000;\nconst wib = new Date(paidAtMs + WIB_OFFSET_MS);\nconst MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];\nconst pad = (value) => String(value).padStart(2, '0');\nconst paidAtWib =\n  wib.getUTCDate() +\n  ' ' +\n  MONTHS[wib.getUTCMonth()] +\n  ' ' +\n  wib.getUTCFullYear() +\n  ', ' +\n  pad(wib.getUTCHours()) +\n  ':' +\n  pad(wib.getUTCMinutes());\n\nconst escape = (value) =>\n  String(value)\n    .split('&').join('&amp;')\n    .split('<').join('&lt;')\n    .split('>').join('&gt;')\n    .split('\"').join('&quot;');\n\nconst groupThousands = (value) => {\n  let digits = String(value);\n  let out = '';\n\n  while (digits.length > 3) {\n    out = '.' + digits.slice(-3) + out;\n    digits = digits.slice(0, -3);\n  }\n\n  return digits + out;\n};\n\nconst totalIdr = 'Rp ' + groupThousands(item.totalIdr);\n\nconst html = [\n  '<h2>Your Roamly order is confirmed</h2>',\n  '<p>Hi ' + escape(item.customerName) + ',</p>',\n  '<p>We received your payment for <strong>' + escape(item.packageName) + '</strong>',\n  ' (' + escape(item.packageDataSnapshot) + ') for ' + escape(item.destinationName) + '.</p>',\n  '<table cellpadding=\"6\" style=\"border-collapse:collapse\">',\n  '  <tr><td>Order</td><td><strong>' + escape(item.orderNumber) + '</strong></td></tr>',\n  '  <tr><td>Total</td><td>' + escape(totalIdr) + '</td></tr>',\n  '  <tr><td>Paid</td><td>' + escape(paidAtWib) + ' WIB</td></tr>',\n  '</table>',\n  '<p>Keep this email as your receipt. To view the order, use the link you received at checkout.</p>',\n  '<p style=\"color:#5a6b7a;font-size:12px\">Reference: ' + escape(item.notificationId) + '</p>',\n].join(String.fromCharCode(10));\n\nreturn [\n  {\n    json: {\n      notificationId: item.notificationId,\n      orderNumber: item.orderNumber,\n      to: item.customerEmail,\n      subject: 'Roamly order ' + item.orderNumber + ' confirmed',\n      html,\n    },\n  },\n];"
+      },
+      "id": "0f0a6f4a-3333-4a33-9a33-333333333333",
+      "name": "Validate & compose",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "orders@example.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "0f0a6f4a-4444-4a44-9a44-444444444444",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ accepted: true, notificationId: $json.notificationId }) }}",
+        "options": {}
+      },
+      "id": "0f0a6f4a-5555-4a55-9a55-555555555555",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        440
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate & compose",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & compose": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "roamly-local"
+  },
+  "tags": []
+}
